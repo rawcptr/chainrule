@@ -1,0 +1,32 @@
+use crate::{
+    identity::{Id, IdGenerator, generators::FreeList},
+    ops::Op,
+};
+
+pub struct Graph<DType = f32, G: IdGenerator = FreeList> {
+    nodes: Vec<Box<dyn Op<DType>>>,
+    generator: G,
+}
+
+impl<D: num_traits::Float> Graph<D> {
+    pub fn new() -> Self {
+        Self {
+            nodes: vec![],
+            generator: FreeList::new(),
+        }
+    }
+
+    pub fn push(&mut self, op: Box<dyn Op<D>>) {
+        self.nodes.push(op);
+    }
+
+    pub fn fresh(&mut self) -> Id {
+        self.generator.fresh()
+    }
+}
+
+impl Default for Graph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
