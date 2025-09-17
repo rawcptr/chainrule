@@ -11,7 +11,7 @@ Experimental:
 
 - This project is currently in the design and early implementation phase
 - The README describes the target architecture and the API as envisioned upon completion
-- It is built for learning and demonstration. The API is subject to breaking changes and performance is not a primary design goal.
+- chainrule is built for learning and demonstration. The API is subject to breaking changes and performance is not a primary design goal.
 
 ## Features
 
