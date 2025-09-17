@@ -22,10 +22,20 @@
 
 use num_traits::{Float, NumOps};
 
-pub trait Floating: std::fmt::Debug + Float + NumOps {}
+pub trait Floating: std::fmt::Debug + Float + NumOps {
+    fn from_f64(val: f64) -> Self;
+}
 
-impl Floating for f32 {}
-impl Floating for f64 {}
+impl Floating for f32 {
+    fn from_f64(val: f64) -> Self {
+        val as f32
+    }
+}
+impl Floating for f64 {
+    fn from_f64(val: f64) -> Self {
+        val
+    }
+}
 
 pub mod context;
 pub mod graph;
