@@ -31,4 +31,4 @@ pub mod context;
 pub mod graph;
 mod identity;
 pub mod ops;
-pub mod tracer;
+pub mod tracing;
