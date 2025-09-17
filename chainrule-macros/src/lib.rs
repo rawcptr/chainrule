@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use proc_macro_crate::{FoundCrate, crate_name};
 use quote::{format_ident, quote};
 use syn::{
     BinOp, Expr, ItemFn, UnOp,
@@ -42,6 +43,7 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let new_body = rewriter.fold_block(*fn_body.clone());
+    let chainrule = chainrule_crate();
 
     let expanded = quote! {
         #fn_vis fn #old_name(#fn_inputs) #fn_output {
@@ -49,9 +51,9 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
             panic!("This function is only usable through trace_fn!");
         }
 
-        #fn_vis fn #fn_name<'a, D: crate::Floating + 'static>(
-            sess: &mut crate::TraceSession<'a, D>,
-        ) -> (Vec<crate::identity::Id>, crate::tracer::Tracer) {
+        #fn_vis fn #fn_name<'a, D: #chainrule::Floating + 'static>(
+            sess: &mut #chainrule::TraceSession<'a, D>,
+        ) -> (Vec<#chainrule::identity::Id>, #chainrule::tracing::Tracer) {
             #( let #arg_idents = { sess.input() }; )*
             let result = { #new_body };
             (vec![#(#arg_idents.id()),*], result)
