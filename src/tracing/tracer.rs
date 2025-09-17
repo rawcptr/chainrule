@@ -28,7 +28,7 @@ impl Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 
-    pub fn matmul(&self, _other: &Tracer) {
+    pub fn matmul(&self, _other: &Tracer) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
