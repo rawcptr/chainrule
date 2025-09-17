@@ -96,10 +96,9 @@ impl<D: Floating> Op<D> for TransposeDefault {
 
 #[cfg(test)]
 mod tests {
-    use chainrule_macros::trace;
     use ndarray::arr2;
 
-    use crate::{Tensor, trace_fn};
+    use crate::prelude::*;
 
     #[test]
     fn test_transpose_default() {

@@ -4,7 +4,7 @@ use ndarray::{
     linalg::{general_mat_mul, general_mat_vec_mul},
 };
 
-use crate::{Floating, TensorData, binary_op};
+use crate::{Floating, binary_op, tracing::TensorData};
 
 fn broadcast_shapes(a: &[usize], b: &[usize]) -> Option<Vec<usize>> {
     let n = a.len().max(b.len());
@@ -160,11 +160,11 @@ binary_op!(
     }
 );
 
+#[cfg(test)]
 mod tests {
-    use chainrule_macros::trace;
     use ndarray::arr2;
 
-    use crate::{Tensor, trace_fn};
+    use crate::prelude::*;
 
     #[test]
     fn test_matmul() {

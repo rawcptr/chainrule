@@ -41,11 +41,11 @@ impl<D: Floating> Op<D> for Neg {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use chainrule_macros::trace;
     use ndarray::arr1;
 
-    use crate::{Tensor, trace_fn};
+    use crate::prelude::*;
 
     #[test]
     fn test_neg() {

@@ -5,8 +5,8 @@
 //!
 //! ## API
 //!
-//! ```rust
-//! use chainrule::{trace, trace_fn, Tensor};
+//! ```rust,ignore
+//! use chainrule::prelude;:*;
 //! use ndarray::array;
 //!
 //! #[trace]
@@ -25,8 +25,9 @@
 //!
 //! A `dense` forward pass:
 //!
-//! ```rust
-//! use chainrule::{trace, trace_fn, Tensor};
+//! ```rust,ignore
+//! use chainrule::prelude::*;
+//! use chainrule::trace;
 //! use ndarray::arr2;
 //!
 //! #[trace]
@@ -84,8 +85,8 @@ pub use crate::tracing::{Tensor, TraceSession, Tracer};
 /// Build a `TraceableFn` graph from a traced function definition.
 ///
 /// Example:
-/// ```rust
-/// use chainrule::{trace, trace_fn, Tensor};
+/// ```rust,ignore
+/// use chainrule::prelude;
 ///
 /// #[trace]
 /// fn f(x: Tensor, y: Tensor) -> Tensor {

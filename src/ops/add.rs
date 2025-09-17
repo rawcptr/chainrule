@@ -7,10 +7,14 @@ binary_op!(
     vjp: |_: &Add, _g: &mut Graph<D>, og: Id| { vec![og, og] }
 );
 
+#[cfg(test)]
 mod tests {
+    use chainrule_macros::trace;
+
     #[test]
     fn test_add() {
-        #[chainrule_macros::trace]
+
+        #[trace]
         fn f(x: crate::Tensor, y: crate::Tensor) -> crate::Tensor {
             x + y
         }
