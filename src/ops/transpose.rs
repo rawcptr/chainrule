@@ -94,6 +94,7 @@ impl<D: Floating> Op<D> for TransposeDefault {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use chainrule_macros::trace;
     use ndarray::arr2;
