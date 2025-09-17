@@ -1,6 +1,7 @@
 pub mod add;
 pub mod constant;
 pub mod input;
+pub mod matmul;
 pub mod mul;
 pub mod neg;
 pub mod sub;
