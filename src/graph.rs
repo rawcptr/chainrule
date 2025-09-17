@@ -1,4 +1,5 @@
 use crate::{
+    Floating,
     identity::{Id, IdGenerator, generators::FreeList},
     ops::Op,
 };
@@ -8,7 +9,7 @@ pub struct Graph<DType = f32, G: IdGenerator = FreeList> {
     generator: G,
 }
 
-impl<D: num_traits::Float> Graph<D> {
+impl<D: Floating> Graph<D> {
     pub fn new() -> Self {
         Self {
             nodes: vec![],

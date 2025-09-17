@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{identity::Id, tracer::TensorData};
+use crate::{Floating, identity::Id, tracing::TensorData};
 
 #[derive(Debug, Clone)]
 pub struct Context<D = f32> {
     pub tensors: HashMap<Id, TensorData<D>>,
 }
 
-impl<D> Context<D> {
+impl<D: Floating> Context<D> {
     pub fn new() -> Self {
         Self {
             tensors: HashMap::new(),

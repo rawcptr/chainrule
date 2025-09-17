@@ -20,6 +20,13 @@
 //! }
 //! ```
 
+use num_traits::{Float, NumOps};
+
+pub trait Floating: std::fmt::Debug + Float + NumOps {}
+
+impl Floating for f32 {}
+impl Floating for f64 {}
+
 pub mod context;
 pub mod graph;
 mod identity;
