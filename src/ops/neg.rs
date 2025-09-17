@@ -40,3 +40,25 @@ impl<D: Floating> Op<D> for Neg {
         vec![self.out]
     }
 }
+
+mod tests {
+    use chainrule_macros::trace;
+    use ndarray::arr1;
+
+    use crate::{Tensor, trace_fn};
+
+    #[test]
+    fn test_neg() {
+        #[trace]
+        fn f(x: Tensor) -> Tensor {
+            -x
+        }
+
+        let traced = trace_fn::<f32>(f);
+
+        let x = arr1(&[2., -3., 4.]).into_dyn();
+        let out = traced.eval()(&x);
+        let expected = -&x;
+        assert_eq!(out, expected);
+    }
+}

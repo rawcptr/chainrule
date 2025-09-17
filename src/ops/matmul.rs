@@ -159,3 +159,28 @@ binary_op!(
         vec![grad_lhs, grad_rhs]
     }
 );
+
+mod tests {
+    use chainrule_macros::trace;
+    use ndarray::arr2;
+
+    use crate::{Tensor, trace_fn};
+
+    #[test]
+    fn test_matmul() {
+        #[trace]
+        fn f(x: Tensor, w: Tensor) -> Tensor {
+            x.matmul(w)
+        }
+
+        let traced = trace_fn::<f32>(f);
+
+        let x = arr2(&[[1., 2.], [3., 4.]]);
+        let w = arr2(&[[5., 6.], [7., 8.]]);
+        let x2 = arr2(&[[1., 2.], [3., 4.]]).into_dyn();
+        let w2 = arr2(&[[5., 6.], [7., 8.]]).into_dyn();
+        let out = traced.eval()((&x2, &w2));
+        let expected = x.dot(&w);
+        assert_eq!(out, expected.into_dyn());
+    }
+}

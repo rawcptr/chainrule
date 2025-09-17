@@ -18,3 +18,26 @@ binary_op!(
         vec![grad_lhs, grad_rhs]
     }
 );
+
+mod tests {
+    use chainrule_macros::trace;
+    use ndarray::arr1;
+
+    use crate::{Tensor, trace_fn};
+
+    #[test]
+    fn test_mul() {
+        #[trace]
+        fn f(x: Tensor, y: Tensor) -> Tensor {
+            x * y
+        }
+
+        let traced = trace_fn::<f32>(f);
+
+        let x = arr1(&[2., 3.]).into_dyn();
+        let y = arr1(&[4., 5.]).into_dyn();
+        let out = traced.eval()((&x, &y));
+        let expected = &x * &y;
+        assert_eq!(out, expected);
+    }
+}
