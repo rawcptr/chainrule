@@ -1,6 +1,17 @@
 pub mod add;
 pub mod mul;
 pub mod constant;
+pub mod input;
+pub mod mul;
+pub mod neg;
+pub mod sub;
+
+pub use add::Add;
+pub use constant::Const;
+pub use input::Input;
+pub use mul::Mul;
+pub use neg::Neg;
+pub use sub::Sub;
 
 use crate::{context::Context, graph::Graph, identity::Id};
 
