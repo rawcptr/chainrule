@@ -7,3 +7,7 @@ edition = "2024"
 ndarray = "0.16.1"
 ndarray-stats = "0.6.0"
 num-traits = "0.2.19"
+chainrule-macros = { path = "chainrule-macros" }
+
+[workspace]
+members = ["chainrule-macros"]

@@ -1,0 +1,12 @@
+[package]
+name = "chainrule-macros"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+proc-macro2 = "1.0.101"
+quote = "1.0.40"
+syn = { version = "2.0.106", features = ["fold", "full", "visit", "visit-mut"] }
+
+[lib]
+proc-macro = true
