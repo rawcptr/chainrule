@@ -6,6 +6,16 @@ use syn::{
     parse_macro_input,
 };
 
+fn chainrule_crate() -> proc_macro2::TokenStream {
+    match crate_name("chainrule").expect("crate `chainrule` not found") {
+        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Name(name) => {
+            let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+            quote!(#ident)
+        }
+    }
+}
+
 #[proc_macro_attribute]
 pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
