@@ -53,7 +53,7 @@ impl<D> Clone for Box<dyn Op<D>> {
 pub mod macros {
     #[macro_export]
     macro_rules! binary_op {
-        ($name:ident, $strname:expr, $forward:expr, $vjp_rule:expr) => {
+        ($name:ident, disp: $strname:expr, fwd: $forward:expr, vjp: $vjp_rule:expr) => {
             #[derive(Debug, Clone)]
             pub struct $name {
                 pub lhs: Id,
@@ -67,7 +67,7 @@ pub mod macros {
                 }
             }
 
-            impl<D: num_traits::Float> $crate::ops::Op<D> for $name {
+            impl<D: $crate::Floating> $crate::ops::Op<D> for $name {
                 fn vjp(
                     &self,
                     g: &mut $crate::graph::Graph<D>,
