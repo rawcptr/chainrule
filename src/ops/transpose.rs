@@ -93,3 +93,25 @@ impl<D: Floating> Op<D> for TransposeDefault {
         vec![self.out]
     }
 }
+
+mod tests {
+    use chainrule_macros::trace;
+    use ndarray::arr2;
+
+    use crate::{Tensor, trace_fn};
+
+    #[test]
+    fn test_transpose_default() {
+        #[trace]
+        fn f(x: Tensor) -> Tensor {
+            x.t()
+        }
+
+        let traced = trace_fn::<f32>(f);
+
+        let x = arr2(&[[1., 2., 3.], [4., 5., 6.]]).into_dyn();
+        let out = traced.eval()(&x);
+        let expected = x.t().into_owned().into_dyn();
+        assert_eq!(out, expected);
+    }
+}
