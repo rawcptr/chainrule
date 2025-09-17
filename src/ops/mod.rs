@@ -4,6 +4,7 @@ pub mod input;
 pub mod mul;
 pub mod neg;
 pub mod sub;
+pub mod transpose;
 
 pub use add::Add;
 pub use constant::Const;
