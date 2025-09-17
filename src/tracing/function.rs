@@ -41,6 +41,7 @@ macro_rules! as_ref_ty {
 macro_rules! impl_eval_args {
     ( $( $len:literal => ( $( $name:ident ),+ ) ),+ $(,)? ) => {
         $(
+            #[allow(unused_parens)]
             impl<'a, D: Floating> EvalArgs<D>
                 for ( $( as_ref_ty!($name, 'a, D) ),+ )
             {
@@ -54,6 +55,7 @@ macro_rules! impl_eval_args {
 }
 
 impl_eval_args! {
+    1  => (a),
     2  => (a,b),
     3  => (a,b,c),
     4  => (a,b,c,d),
