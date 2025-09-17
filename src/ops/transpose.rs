@@ -64,7 +64,7 @@ impl TransposeDefault {
 
 impl<D: Floating> Op<D> for TransposeDefault {
     fn name(&self) -> &str {
-        "transpose"
+        "transpose_default"
     }
 
     fn eval(&self, ctx: &mut crate::context::Context<D>) {
