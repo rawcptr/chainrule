@@ -54,6 +54,10 @@ impl<D> Clone for Box<dyn Op<D>> {
 
 pub mod macros {
     #[macro_export]
+    /// binary operation implementer
+    ///
+    /// fwd: |x: Tensor, y: Tensor| -> Tensor;
+    /// vjp: |self, g: Graph, og: &[Id]| -> Option<Vec<ID>>;
     macro_rules! binary_op {
         ($name:ident, disp: $strname:expr, fwd: $forward:expr, vjp: $vjp_rule:expr) => {
             #[derive(Debug, Clone)]
