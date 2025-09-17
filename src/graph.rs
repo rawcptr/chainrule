@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     Floating,
     identity::{Id, IdGenerator, generators::FreeList},
@@ -29,5 +31,20 @@ impl<D: Floating> Graph<D> {
 impl Default for Graph {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<D: Floating> Display for Graph<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, node) in self.nodes.iter().enumerate() {
+            writeln!(
+                f,
+                "{i}: {} {:?} -> {:?}",
+                node.name(),
+                node.inputs(),
+                node.outputs()
+            )?;
+        }
+        Ok(())
     }
 }
