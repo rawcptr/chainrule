@@ -19,6 +19,20 @@ impl Tracer {
     }
 }
 
+impl Tracer {
+    pub fn t(&self) -> Tracer {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+
+    pub fn transpose(&self, _a1: usize, _a2: usize) -> Tracer {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+
+    pub fn matmul(&self, _other: &Tracer) {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+}
+
 impl Add for Tracer {
     type Output = Tracer;
     fn add(self, _rhs: Tracer) -> Tracer {
