@@ -8,3 +8,11 @@ pub struct Tracer {
     id: Id,
 }
 
+impl Tracer {
+    pub fn new(id: Id) -> Tracer {
+        Self { id }
+    }
+    pub fn id(&self) -> Id {
+        self.id
+    }
+}
