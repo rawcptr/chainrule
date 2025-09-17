@@ -1,5 +1,4 @@
 pub mod add;
-pub mod mul;
 pub mod constant;
 pub mod input;
 pub mod mul;
