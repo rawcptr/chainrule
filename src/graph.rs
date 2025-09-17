@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub struct Graph<DType = f32, G: IdGenerator = FreeList> {
-    nodes: Vec<Box<dyn Op<DType>>>,
+    pub nodes: Vec<Box<dyn Op<DType>>>,
     generator: G,
 }
 
