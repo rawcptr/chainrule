@@ -11,6 +11,7 @@ pub use input::Input;
 pub use mul::Mul;
 pub use neg::Neg;
 pub use sub::Sub;
+pub use transpose::{Transpose, TransposeDefault};
 
 use crate::{context::Context, graph::Graph, identity::Id};
 
