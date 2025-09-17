@@ -1,0 +1,161 @@
+use crate::{Graph, identity::Id, ops::transpose::TransposeDefault};
+use ndarray::{
+    Array, ArrayD, ArrayView1, Ix1, Ix2, IxDyn,
+    linalg::{general_mat_mul, general_mat_vec_mul},
+};
+
+use crate::{Floating, TensorData, binary_op};
+
+fn broadcast_shapes(a: &[usize], b: &[usize]) -> Option<Vec<usize>> {
+    let n = a.len().max(b.len());
+    let mut result = Vec::with_capacity(n);
+
+    for i in 0..n {
+        let dim_a = *a.get(a.len().wrapping_sub(i + 1)).unwrap_or(&1);
+        let dim_b = *b.get(b.len().wrapping_sub(i + 1)).unwrap_or(&1);
+
+        if dim_a == dim_b || dim_a == 1 {
+            result.push(dim_b);
+        } else if dim_b == 1 {
+            result.push(dim_a);
+        } else {
+            return None;
+        }
+    }
+
+    result.reverse();
+    Some(result)
+}
+
+fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD<D> {
+    let shape_a = a.shape();
+    let shape_b = b.shape();
+
+    assert!(shape_a.len() >= 2 && shape_b.len() >= 2);
+
+    let (m, k1) = (shape_a[shape_a.len() - 2], shape_a[shape_a.len() - 1]);
+    let (k2, n) = (shape_b[shape_b.len() - 2], shape_b[shape_b.len() - 1]);
+    assert_eq!(k1, k2, "Matrix multiply inner dims mismatch");
+
+    let batch_a = &shape_a[..shape_a.len() - 2];
+    let batch_b = &shape_b[..shape_b.len() - 2];
+    let batch_shape =
+        broadcast_shapes(batch_a, batch_b).expect("Incompatible batch shapes for broadcasting");
+
+    let bc_shape_a: Vec<usize> = batch_shape.iter().cloned().chain([m, k1]).collect();
+    let bc_shape_b: Vec<usize> = batch_shape.iter().cloned().chain([k2, n]).collect();
+
+    let a_bc = a.broadcast(IxDyn(&bc_shape_a)).unwrap();
+    let b_bc = b.broadcast(IxDyn(&bc_shape_b)).unwrap();
+
+    let result_shape: Vec<usize> = batch_shape.iter().cloned().chain([m, n]).collect();
+    let mut result = ArrayD::zeros(IxDyn(&result_shape));
+
+    let batch_elems: usize = batch_shape.iter().product();
+    let a_resh = a_bc.to_shape((batch_elems, m, k1)).unwrap();
+    let b_resh = b_bc.to_shape((batch_elems, k2, n)).unwrap();
+    let binding = result.view_mut();
+    let mut r_resh = binding.to_shape((batch_elems, m, n)).unwrap();
+
+    ndarray::Zip::from(a_resh.outer_iter())
+        .and(b_resh.outer_iter())
+        .and(r_resh.outer_iter_mut())
+        .for_each(|ai, bi, mut ri| {
+            general_mat_mul(D::one(), &ai, &bi, D::zero(), &mut ri);
+        });
+
+    result
+}
+pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> TensorData<D> {
+    match (a.ndim(), b.ndim()) {
+        // scalar
+        (0, _) | (_, 0) => &a * &b,
+
+        // vector dot product
+        (1, 1) => {
+            assert_eq!(a.len(), b.len());
+            let a1: ArrayView1<D> = a.view().into_dimensionality::<Ix1>().unwrap();
+            let b1: ArrayView1<D> = b.view().into_dimensionality::<Ix1>().unwrap();
+            TensorData::from_elem(vec![], a1.dot(&b1))
+        }
+
+        // vector (a or b) @ matrix (a, b) -> vector (1D)
+        (1, 2) => {
+            let n = a.len();
+            assert_eq!(n, b.shape()[0]); // (n,) @ (n,m)
+            let m = b.shape()[1];
+            let a1 = a.view().into_dimensionality::<Ix1>().unwrap();
+            let b2 = b.view().into_dimensionality::<Ix2>().unwrap();
+
+            let mut result = Array::zeros(m);
+            // (1×n) × (n×m) → (m,)
+            general_mat_vec_mul(D::one(), &b2.t(), &a1, D::zero(), &mut result);
+            result.into_dyn()
+        }
+
+        // matrix (a, b) @ vector (a or b) -> vector (1D)
+        (2, 1) => {
+            let n = b.len();
+            assert_eq!(n, a.shape()[1]); // (m,n) @ (n,)
+            let m = a.shape()[0];
+            let a2 = a.view().into_dimensionality::<Ix2>().unwrap();
+            let b1 = b.view().into_dimensionality::<Ix1>().unwrap();
+
+            let mut result = Array::zeros(m);
+            general_mat_vec_mul(D::one(), &a2, &b1, D::zero(), &mut result);
+            result.into_dyn()
+        }
+
+        // matrix (a,b) @ matrix (b, c) -> matrix (a, c)
+        (2, 2) => {
+            let (m, k1) = (a.shape()[0], a.shape()[1]);
+            let (k2, n) = (b.shape()[0], b.shape()[1]);
+            assert_eq!(k1, k2);
+
+            let a2 = a.view().into_dimensionality::<Ix2>().unwrap();
+            let b2 = b.view().into_dimensionality::<Ix2>().unwrap();
+
+            let mut result = Array::zeros((m, n));
+            general_mat_mul(D::one(), &a2, &b2, D::zero(), &mut result);
+            result.into_dyn()
+        }
+
+        // fallback to batched dims
+        _ => batched_matmul(&a, &b),
+    }
+}
+
+binary_op!(
+    MatMul,
+    disp: "matmul",
+    fwd: |x: TensorData<D>, y: TensorData<D>| matmul(x, y),
+    vjp: |this: &MatMul, g: &mut Graph<D>, og: Id| {
+        // "this.lhs" and "this.rhs" are the inputs to forward op (x, y)
+
+        // Grad w.r.t lhs: d_out @ transpose(rhs)
+        let rhs_t = {
+            let out = g.fresh();
+            g.push(TransposeDefault::boxed(this.rhs, out));
+            out
+        };
+        let grad_lhs = {
+            let out = g.fresh();
+            g.push(Box::new(MatMul::new(og, rhs_t, out)));
+            out
+        };
+
+        // Grad w.r.t rhs: transpose(lhs) @ d_out
+        let lhs_t = {
+            let out = g.fresh();
+            g.push(TransposeDefault::boxed(this.lhs, out));
+            out
+        };
+        let grad_rhs = {
+            let out = g.fresh();
+            g.push(Box::new(MatMul::new(lhs_t, og, out)));
+            out
+        };
+
+        vec![grad_lhs, grad_rhs]
+    }
+);

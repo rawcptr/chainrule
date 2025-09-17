@@ -9,6 +9,7 @@ pub mod transpose;
 pub use add::Add;
 pub use constant::Const;
 pub use input::Input;
+pub use matmul::MatMul;
 pub use mul::Mul;
 pub use neg::Neg;
 pub use sub::Sub;
