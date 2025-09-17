@@ -74,7 +74,7 @@ pub mod macros {
                 }
             }
 
-            impl<D: $crate::Floating> $crate::ops::Op<D> for $name {
+            impl<D: $crate::Floating + 'static> $crate::ops::Op<D> for $name {
                 fn vjp(
                     &self,
                     g: &mut $crate::graph::Graph<D>,
