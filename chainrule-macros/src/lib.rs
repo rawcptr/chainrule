@@ -1,6 +1,10 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{ItemFn, parse_macro_input};
+use syn::{
+    BinOp, Expr, ItemFn, UnOp,
+    fold::{self, Fold},
+    parse_macro_input,
+};
 
 #[proc_macro_attribute]
 pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -20,6 +24,14 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
     let fn_body = &input_fn.block;
+    let sess_ident = syn::parse_str::<syn::Ident>("sess").unwrap();
+
+    let mut rewriter = TraceRewriter {
+        sess_ident: sess_ident.clone(),
+        counter: 1,
+    };
+
+    let new_body = rewriter.fold_block(*fn_body.clone());
 
     let expanded = quote! {
         #fn_vis fn #old_name(#fn_inputs) #fn_output {
@@ -31,9 +43,94 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
             sess: &mut crate::TraceSession<'a, D>,
         ) -> (Vec<crate::identity::Id>, crate::tracer::Tracer) {
             #( let #arg_idents = { sess.input() }; )*
-            let result = { #fn_body };
+            let result = { #new_body };
             (vec![#(#arg_idents.id()),*], result)
         }
     };
     TokenStream::from(expanded)
+}
+
+struct TraceRewriter {
+    sess_ident: syn::Ident,
+    counter: usize,
+}
+
+impl TraceRewriter {
+    fn fresh(&mut self, prefix: &str) -> syn::Ident {
+        let idx = self.counter;
+        self.counter += 1;
+        format_ident!("__{}_{}", prefix, idx)
+    }
+}
+
+impl Fold for TraceRewriter {
+    fn fold_expr(&mut self, expr: Expr) -> Expr {
+        match expr {
+            Expr::Binary(bin) => {
+                let lhs = self.fold_expr(*bin.left);
+                let rhs = self.fold_expr(*bin.right);
+                let tmp_l = self.fresh("tmp_l");
+                let tmp_r = self.fresh("tmp_r");
+                let sess = &self.sess_ident;
+                match bin.op {
+                    BinOp::Add(_) => syn::parse_quote! {{
+                        let #tmp_l = #lhs;
+                        let #tmp_r = #rhs;
+                        #sess.add(#tmp_l, #tmp_r)
+                    }},
+                    BinOp::Sub(_) => syn::parse_quote! {{
+                        let #tmp_l = #lhs;
+                        let #tmp_r = #rhs;
+                        #sess.sub(#lhs, #rhs)
+                    }},
+                    BinOp::Mul(_) => syn::parse_quote! {{
+                        let #tmp_l = #lhs;
+                        let #tmp_r = #rhs;
+                        #sess.mul(#lhs, #rhs)
+                    }},
+                    _ => syn::parse_quote! {
+                        compile_error!("unsupported operator in #[trace] fn")
+                    },
+                }
+            }
+            Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => {
+                let inner = self.fold_expr(*u.expr);
+                let tmp = self.fresh("tmp_neg");
+                let sess = &self.sess_ident;
+                syn::parse_quote! {{
+                    let #tmp = #inner;
+                    #sess.neg(#tmp)
+                }}
+            }
+            Expr::Lit(lit) => {
+                let sess = &self.sess_ident;
+                match lit.lit {
+                    syn::Lit::Float(lit_float) => syn::parse_quote! {{
+                        #sess.constant(D::from_f64(#lit_float))
+                    }},
+                    _ => syn::parse_quote! {
+                        compile_error!("unsupported literal in #[trace] fn")
+                    },
+                }
+            }
+            Expr::MethodCall(mc) => {
+                let receiver = self.fold_expr(*mc.receiver.clone());
+                let args: Vec<_> = mc
+                    .args
+                    .clone()
+                    .into_iter()
+                    .map(|a| self.fold_expr(a))
+                    .collect();
+                let sess = &self.sess_ident;
+
+                match mc.method.to_string().as_str() {
+                    "matmul" => syn::parse_quote! { #sess.matmul(#receiver, #(#args),*) },
+                    "t" => syn::parse_quote! { #sess.t(#receiver) },
+                    "transpose" => syn::parse_quote! { #sess.transpose(#receiver, #(#args),*) },
+                    _ => syn::parse_quote! { #receiver.#mc.method(#(#args),*) }, // untouched
+                }
+            }
+            other => fold::fold_expr(self, other),
+        }
+    }
 }
