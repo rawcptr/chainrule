@@ -73,7 +73,7 @@ impl<D: Floating> Op<D> for TransposeDefault {
         let rank = shape.len();
 
         if rank > 1 {
-            t.swap_axes(rank - 1, rank - 1);
+            t.swap_axes(rank - 1, rank - 2);
         };
         ctx.tensors.insert(self.out, t);
     }
