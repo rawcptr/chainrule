@@ -48,9 +48,9 @@ fn main() {
     let b = array![4., 5., 6.];
 
     // 3. Evaluate the function or its gradients.
-    let result = f.eval()(&a, &b);
-    let df = f.grad()(&a, &b);
-    let ddf = f.grad().grad()(&a, &b);
+    let result = f.eval()((&a, &b));
+    let df = f.grad()((&a, &b));
+    let ddf = f.grad().grad()((&a, &b));
 
 
     println!("result: {:?}", result);
