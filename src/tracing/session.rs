@@ -2,7 +2,11 @@ use crate::{
     Floating,
     graph::Graph,
     identity::Id,
-    ops::{Add, Const, Input, Mul, Neg, Op, Sub},
+    ops::{
+        Add, Const, Input, Mul, Neg, Op, Sub,
+        matmul::MatMul,
+        transpose::{Transpose, TransposeDefault},
+    },
     tracing::Tracer,
 };
 
@@ -58,5 +62,20 @@ where
     pub fn neg(&mut self, a: Tracer) -> Tracer {
         let out = self.g.fresh();
         self.emit(Neg::new(a.id(), out), out)
+    }
+
+    pub fn matmul(&mut self, a: Tracer, b: Tracer) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(MatMul::new(a.id(), b.id(), out), out)
+    }
+
+    pub fn t(&mut self, a: Tracer) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(TransposeDefault::new(a.id(), out), out)
+    }
+
+    pub fn transpose(&mut self, a: Tracer, a1: usize, a2: usize) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(Transpose::new(a.id(), out, a1, a2), out)
     }
 }
