@@ -42,3 +42,26 @@ pub mod graph;
 mod identity;
 pub mod ops;
 pub mod tracing;
+pub use chainrule_macros::trace;
+
+use crate::function::TraceableFn;
+use crate::graph::Graph;
+use crate::identity::Id;
+pub use crate::tracing::Tensor;
+pub use crate::tracing::*;
+
+pub fn trace_fn<D>(builder: fn(&mut TraceSession<D>) -> (Vec<Id>, Tracer)) -> TraceableFn<D>
+where
+    D: Floating + 'static,
+{
+    let mut g = Graph::<D>::new();
+    let mut sess = TraceSession::new(&mut g);
+
+    let (inputs, output) = builder(&mut sess);
+
+    TraceableFn {
+        graph: g,
+        inputs,
+        outputs: vec![output.id()],
+    }
+}
