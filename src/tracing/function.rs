@@ -11,7 +11,7 @@ pub trait EvalArgs<D: Floating> {
 }
 
 impl<D: Floating + 'static> TraceableFn<D> {
-    pub fn eval<'s, T>(&'s self) -> impl Fn(T) -> TensorData<D> + 's
+    pub fn eval<T>(&self) -> impl Fn(T) -> TensorData<D>
     where
         T: EvalArgs<D>,
     {

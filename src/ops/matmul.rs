@@ -66,6 +66,8 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
 
     result
 }
+
+// TODO: fix all the unwraps here. I just don't want a lot of visual clutter with `.expect(..)`
 pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> TensorData<D> {
     match (a.ndim(), b.ndim()) {
         // scalar
