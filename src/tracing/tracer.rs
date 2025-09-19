@@ -50,3 +50,11 @@ impl Neg for Tracer {
         panic!("dummy Neg operator – only allowed inside #[trace] functions")
     }
 }
+
+impl Div for Tracer {
+    type Output = Self;
+
+    fn div(self, _: Self) -> Self::Output {
+        panic!("dummy Div operator - only allowed inside #[trace] functions")
+    }
+}
