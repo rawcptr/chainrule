@@ -84,39 +84,45 @@ impl Fold for TraceRewriter {
                 let rhs = self.fold_expr(*bin.right);
                 let tmp_l = self.fresh("tmp_l");
                 let tmp_r = self.fresh("tmp_r");
+                let tmp_out = self.fresh("tmp_out");
                 let sess = &self.sess_ident;
                 match bin.op {
                     BinOp::Add(_) => syn::parse_quote! {{
                         let #tmp_l = #lhs;
                         let #tmp_r = #rhs;
-                        #sess.add(#tmp_l, #tmp_r)
+                        let #tmp_out = #sess.add(#tmp_l, #tmp_r);
+                        #tmp_out
                     }},
                     BinOp::Sub(_) => syn::parse_quote! {{
                         let #tmp_l = #lhs;
                         let #tmp_r = #rhs;
-                        #sess.sub(#tmp_l, #tmp_r)
+                        let #tmp_out = #sess.sub(#tmp_l, #tmp_r);
+                        #tmp_out
                     }},
                     BinOp::Mul(_) => syn::parse_quote! {{
                         let #tmp_l = #lhs;
                         let #tmp_r = #rhs;
-                        #sess.mul(#tmp_l, #tmp_r)
+                        let #tmp_out = #sess.mul(#tmp_l, #tmp_r);
+                        #tmp_out
                     }},
                     _ => syn::parse_quote! {
                         compile_error!("unsupported operator in #[trace] fn")
                     },
                 }
             }
+
             Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => {
                 let inner = self.fold_expr(*u.expr);
                 let tmp_in = self.fresh("tmp_in");
-                let tmp_res = self.fresh("tmp_neg");
+                let tmp_out = self.fresh("tmp_neg");
                 let sess = &self.sess_ident;
                 syn::parse_quote! {{
                     let #tmp_in = #inner;
-                    let #tmp_res = #sess.neg(#tmp_in);
-                    #tmp_res
+                    let #tmp_out = #sess.neg(#tmp_in);
+                    #tmp_out
                 }}
             }
+
             Expr::Lit(lit) => {
                 let sess = &self.sess_ident;
                 match lit.lit {
@@ -126,6 +132,7 @@ impl Fold for TraceRewriter {
                     _ => Expr::Lit(lit),
                 }
             }
+
             Expr::MethodCall(mc) => {
                 let receiver = self.fold_expr(*mc.receiver.clone());
                 let args: Vec<_> = mc
