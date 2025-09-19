@@ -1,6 +1,7 @@
 use crate::identity::Id;
 
 use core::ops::{Add, Mul, Neg, Sub};
+use std::ops::Div;
 
 pub type TensorData<T = f32> = ndarray::ArrayD<T>;
 pub type Tensor = Tracer;
