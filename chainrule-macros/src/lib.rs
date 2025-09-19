@@ -120,9 +120,7 @@ impl Fold for TraceRewriter {
                     syn::Lit::Float(lit_float) => syn::parse_quote! {{
                         #sess.constant(D::from_f64(#lit_float))
                     }},
-                    _ => syn::parse_quote! {
-                        compile_error!("unsupported literal in #[trace] fn")
-                    },
+                    _ => Expr::Lit(lit),
                 }
             }
             Expr::MethodCall(mc) => {
