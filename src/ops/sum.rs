@@ -62,6 +62,19 @@ impl<D: Floating> Op<D> for Sum {
     }
 }
 
+impl Tracer {
+    pub fn sum(&self, _axis: Vec<usize>, _keep_dims: bool) -> Tracer {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+}
+
+impl<D: Floating + 'static> TraceSession<'_, D> {
+    pub fn sum(&mut self, a: Tracer, axis: Vec<usize>, keep_dims: bool) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(Sum::new(a.id(), out, axis, keep_dims), out)
+    }
+}
+
 // Reduce (sum) runtime `inp` down to the runtime shape of `like`.
 #[derive(Debug, Clone)]
 pub struct ReduceToLike {
