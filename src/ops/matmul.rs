@@ -33,36 +33,49 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
 
     assert!(
         shape_a.len() >= 2 && shape_b.len() >= 2,
-        "shapes are not valid for batched matrix multiply"
+        "inputs for batched matrix mul should have rank > 2"
     );
 
     let (m, k1) = (shape_a[shape_a.len() - 2], shape_a[shape_a.len() - 1]);
     let (k2, n) = (shape_b[shape_b.len() - 2], shape_b[shape_b.len() - 1]);
-    assert_eq!(k1, k2, "matrix multiply inner dims mismatch");
+    assert_eq!(
+        k1, k2,
+        "inner matrix dimensions should match for matrix mul: lhs contracted dim is {k1}, rhs is {k2}"
+    );
 
     let batch_a = &shape_a[..shape_a.len() - 2];
     let batch_b = &shape_b[..shape_b.len() - 2];
-    let batch_shape =
-        broadcast_shapes(batch_a, batch_b).expect("Incompatible batch shapes for broadcasting");
+    let batch_shape = broadcast_shapes(batch_a, batch_b)
+        .expect("batch dimensions should be broadcast-compatible");
 
     let bc_shape_a: Vec<usize> = batch_shape.iter().cloned().chain([m, k1]).collect();
     let bc_shape_b: Vec<usize> = batch_shape.iter().cloned().chain([k2, n]).collect();
 
-    let a_bc = a.broadcast(IxDyn(&bc_shape_a)).unwrap();
-    let b_bc = b.broadcast(IxDyn(&bc_shape_b)).unwrap();
+    let a_bc = a
+        .broadcast(IxDyn(&bc_shape_a))
+        .expect("broadcasting to a derived valid shape should be infallible ");
+    let b_bc = b
+        .broadcast(IxDyn(&bc_shape_b))
+        .expect("broadcasting to a derived valid shape should be infallible ");
 
     let result_shape: Vec<usize> = batch_shape.iter().cloned().chain([m, n]).collect();
     let mut result = ArrayD::zeros(IxDyn(&result_shape));
 
     let batch_elems: usize = batch_shape.iter().product();
-    let a_resh = a_bc.to_shape((batch_elems, m, k1)).unwrap();
-    let b_resh = b_bc.to_shape((batch_elems, k2, n)).unwrap();
+    let a_reshaped = a_bc
+        .to_shape((batch_elems, m, k1))
+        .expect("reshape should succeed because the number of elements is preserved");
+    let b_reshaped = b_bc
+        .to_shape((batch_elems, k2, n))
+        .expect("reshape should succeed because the number of elements is preserved");
     let binding = result.view_mut();
-    let mut r_resh = binding.to_shape((batch_elems, m, n)).unwrap();
+    let mut r_reshaped = binding
+        .to_shape((batch_elems, m, n))
+        .expect("reshape should succeed because the number of elements is preserved");
 
-    ndarray::Zip::from(a_resh.outer_iter())
-        .and(b_resh.outer_iter())
-        .and(r_resh.outer_iter_mut())
+    ndarray::Zip::from(a_reshaped.outer_iter())
+        .and(b_reshaped.outer_iter())
+        .and(r_reshaped.outer_iter_mut())
         .for_each(|ai, bi, mut ri| {
             general_mat_mul(D::one(), &ai, &bi, D::zero(), &mut ri);
         });
@@ -78,19 +91,39 @@ pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> Tens
 
         // vector dot product
         (1, 1) => {
-            assert_eq!(a.len(), b.len());
-            let a1: ArrayView1<D> = a.view().into_dimensionality::<Ix1>().unwrap();
-            let b1: ArrayView1<D> = b.view().into_dimensionality::<Ix1>().unwrap();
+            assert_eq!(
+                a.len(),
+                b.len(),
+                "vectors in dot-product should have same length"
+            );
+            let a1: ArrayView1<D> = a
+                .view()
+                .into_dimensionality::<Ix1>()
+                .expect("an ndim=1 tensor should be convertible to a 1D view");
+            let b1: ArrayView1<D> = b
+                .view()
+                .into_dimensionality::<Ix1>()
+                .expect("an ndim=1 tensor should be convertible to a 1D view");
             TensorData::from_elem(vec![], a1.dot(&b1))
         }
 
         // vector (a or b) @ matrix (a, b) -> vector (1D)
         (1, 2) => {
             let n = a.len();
-            assert_eq!(n, b.shape()[0]); // (n,) @ (n,m)
+            assert_eq!(
+                n,
+                b.shape()[0],
+                "vector length should match matrix's outer dimension for vec @ mat"
+            ); // (n,) @ (n,m)
             let m = b.shape()[1];
-            let a1 = a.view().into_dimensionality::<Ix1>().unwrap();
-            let b2 = b.view().into_dimensionality::<Ix2>().unwrap();
+            let a1 = a
+                .view()
+                .into_dimensionality::<Ix1>()
+                .expect("an ndim=1 tensor should be convertible to a 1D view");
+            let b2 = b
+                .view()
+                .into_dimensionality::<Ix2>()
+                .expect("an ndim=2 tensor should be convertible to a 2D view");
 
             let mut result = Array::zeros(m);
             // (1×n) × (n×m) → (m,)
@@ -101,10 +134,20 @@ pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> Tens
         // matrix (a, b) @ vector (a or b) -> vector (1D)
         (2, 1) => {
             let n = b.len();
-            assert_eq!(n, a.shape()[1]); // (m,n) @ (n,)
+            assert_eq!(
+                n,
+                a.shape()[1],
+                "vector length should match matrix's inner dimension for mat @ vec"
+            ); // (m,n) @ (n,)
             let m = a.shape()[0];
-            let a2 = a.view().into_dimensionality::<Ix2>().unwrap();
-            let b1 = b.view().into_dimensionality::<Ix1>().unwrap();
+            let a2 = a
+                .view()
+                .into_dimensionality::<Ix2>()
+                .expect("an ndim=2 tensor should be convertible to a 2D view");
+            let b1 = b
+                .view()
+                .into_dimensionality::<Ix1>()
+                .expect("an ndim=2 tensor should be convertible to a 2D view");
 
             let mut result = Array::zeros(m);
             general_mat_vec_mul(D::one(), &a2, &b1, D::zero(), &mut result);
@@ -115,10 +158,19 @@ pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> Tens
         (2, 2) => {
             let (m, k1) = (a.shape()[0], a.shape()[1]);
             let (k2, n) = (b.shape()[0], b.shape()[1]);
-            assert_eq!(k1, k2, "inner dimension {k1} != {k2}");
+            assert_eq!(
+                k1, k2,
+                "inner dimension for matrix mul should be equal but lhs({k1}) != rhs({k2})"
+            );
 
-            let a2 = a.view().into_dimensionality::<Ix2>().unwrap();
-            let b2 = b.view().into_dimensionality::<Ix2>().unwrap();
+            let a2 = a
+                .view()
+                .into_dimensionality::<Ix2>()
+                .expect("an ndim=2 tensor should be convertible to a 2D view");
+            let b2 = b
+                .view()
+                .into_dimensionality::<Ix2>()
+                .expect("an ndim=2 tensor should be convertible to a 2D view");
 
             let mut result = Array::zeros((m, n));
             general_mat_mul(D::one(), &a2, &b2, D::zero(), &mut result);
