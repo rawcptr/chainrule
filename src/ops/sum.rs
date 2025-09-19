@@ -95,8 +95,6 @@ impl<D: Floating> Op<D> for ReduceToLike {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        use ndarray::Axis;
-
         let mut t = ctx.checked_get(&self.inp).clone();
         let like = ctx.checked_get(&self.like);
         let a_shape = t.shape().to_vec();
@@ -108,30 +106,39 @@ impl<D: Floating> Op<D> for ReduceToLike {
         );
 
         let offset = a_shape.len() - b_shape.len();
+        // Any leading extra dims must be reduced away
         let mut axes: Vec<usize> = (0..offset).collect();
+
+        // for aligned dims, if they differ, we can only reduce if like=1.
         for i in 0..b_shape.len() {
             let a = a_shape[offset + i];
             let b = b_shape[i];
-            if b == 1 && a > 1 {
+            if a == b {
+                continue;
+            } else if b == 1 {
                 axes.push(offset + i);
             } else {
-                assert!(
-                    a == b,
-                    "reduce_to_like: incompatible dims: inp={} like={}",
-                    a,
-                    b
+                panic!(
+                    "reduce_to_like: incompatible dims: inp dim {} vs like dim {} at axis {}",
+                    a, b, i
                 );
             }
         }
+
         axes.sort_unstable_by(|x, y| y.cmp(x));
         for ax in axes {
-            t = t.sum_axis(Axis(ax));
+            t = t.sum_axis(ndarray::Axis(ax));
         }
+
         assert_eq!(
             t.shape(),
             like.shape(),
-            "reduce_to_like: shapes mismatch after reduction"
+            "reduce_to_like: shapes mismatch after reduction: inp {:?} like {:?} got {:?}",
+            a_shape,
+            b_shape,
+            t.shape()
         );
+
         ctx.tensors.insert(self.out, t);
     }
 
