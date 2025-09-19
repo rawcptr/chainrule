@@ -83,11 +83,10 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
     result
 }
 
-// TODO: fix all the unwraps here. I just don't want a lot of visual clutter with `.expect(..)`
-pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> TensorData<D> {
+pub fn matmul<D: Floating + 'static>(a: &TensorData<D>, b: &TensorData<D>) -> TensorData<D> {
     match (a.ndim(), b.ndim()) {
         // scalar
-        (0, _) | (_, 0) => &a * &b,
+        (0, _) | (_, 0) => a * b,
 
         // vector dot product
         (1, 1) => {
@@ -178,14 +177,14 @@ pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> Tens
         }
 
         // fallback to batched dims
-        _ => batched_matmul(&a, &b),
+        _ => batched_matmul(a, b),
     }
 }
 
 binary_op!(
     MatMul,
     disp: "matmul",
-    fwd: |x: TensorData<D>, y: TensorData<D>| matmul(x, y),
+    fwd: |ref x: TensorData<D>, ref y: TensorData<D>| matmul(x, y),
     vjp: |this: &MatMul, g: &mut Graph<D>, og: Id| {
         // "this.lhs" and "this.rhs" are the inputs to forward op (x, y)
 
