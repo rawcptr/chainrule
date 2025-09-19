@@ -1,14 +1,26 @@
-use crate::{graph::Graph, identity::Id, ops::neg::Neg, primitive_binary_op, tracing::TensorData};
+use crate::{
+    graph::Graph,
+    identity::Id,
+    ops::{neg::Neg, sum::ReduceToLike},
+    primitive_binary_op,
+    tracing::TensorData,
+};
 
 primitive_binary_op!(
     Sub,
     disp:  "sub",
     fwd: |x: TensorData<D>, y: TensorData<D>| x - y,
-    vjp: |_: &Sub, g: &mut Graph<D>, og: Id| {
-        let grad_x = og;
-        let grad_y = {
+    vjp: |this: &Sub, g: &mut Graph<D>, og: Id| {
+        let grad_x = {
             let out = g.fresh();
-            g.push(Neg::boxed(og, out));
+            g.push(Box::new(ReduceToLike::new(og, this.lhs, out)));
+            out
+        };
+        let grad_y = {
+            let neg_og = g.fresh();
+            g.push(Neg::boxed(og, neg_og));
+            let out = g.fresh();
+            g.push(Box::new(ReduceToLike::new(neg_og, this.rhs, out)));
             out
         };
         vec![grad_x, grad_y]

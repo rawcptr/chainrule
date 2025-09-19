@@ -1,10 +1,24 @@
-use crate::{graph::Graph, identity::Id, primitive_binary_op, tracing::TensorData};
+use crate::{
+    graph::Graph, identity::Id, ops::sum::ReduceToLike, primitive_binary_op, tracing::TensorData,
+};
 
 primitive_binary_op!(
     Add,
     disp: "add",
     fwd: |x: TensorData<D>, y: TensorData<D>| x + y,
-    vjp: |_: &Add, _g: &mut Graph<D>, og: Id| { vec![og, og] }
+    vjp: |this: &Add, g: &mut Graph<D>, og: Id| {
+        let grad_lhs = {
+            let out = g.fresh();
+            g.push(Box::new(ReduceToLike::new(og, this.lhs, out)));
+            out
+        };
+        let grad_rhs = {
+            let out = g.fresh();
+            g.push(Box::new(ReduceToLike::new(og, this.rhs, out)));
+            out
+        };
+        vec![grad_lhs, grad_rhs]
+    }
 );
 
 #[cfg(test)]
