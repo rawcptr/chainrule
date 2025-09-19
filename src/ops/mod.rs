@@ -1,4 +1,5 @@
 pub mod add;
+pub mod broadcast;
 pub mod constant;
 pub mod input;
 pub mod matmul;
@@ -6,6 +7,8 @@ pub mod mul;
 pub mod neg;
 pub mod sub;
 pub mod transpose;
+
+use core::fmt::Debug;
 
 pub use add::Add;
 pub use constant::Const;
@@ -32,10 +35,11 @@ where
     }
 }
 
-pub trait Op<D>: std::fmt::Debug + OpClone<D> {
-    fn name(&self) -> &str;
+pub trait Op<D>: Debug + OpClone<D> {
     /// forward semantics
     fn eval(&self, ctx: &mut Context<D>);
+
+    fn name(&self) -> &str;
 
     /// symbolic vector jacobian product
     /// given inputs and upstream output grads
@@ -63,6 +67,7 @@ pub mod macros {
     macro_rules! binary_op {
         ($name:ident, disp: $strname:expr, fwd: $forward:expr, vjp: $vjp_rule:expr) => {
             #[derive(Debug, Clone)]
+            #[non_exhaustive]
             pub struct $name {
                 pub lhs: Id,
                 pub rhs: Id,
@@ -81,7 +86,7 @@ pub mod macros {
                     g: &mut $crate::graph::Graph<D>,
                     out_grads: &[Id],
                 ) -> Option<Vec<Id>> {
-                    let og = out_grads[0];
+                    let og = *out_grads.first()?;
                     Some($vjp_rule(self, g, og))
                 }
 
