@@ -1,0 +1,160 @@
+use ndarray::Axis;
+
+use crate::{
+    Floating, Graph, Id, TraceSession, Tracer,
+    context::Context,
+    ops::{Op, broadcast::BroadcastLike, constant::Const, div::Div, sum::Sum},
+};
+
+#[derive(Debug, Clone)]
+pub struct Mean {
+    inp: Id,
+    out: Id,
+    axis: Vec<usize>,
+    keep_dims: bool,
+}
+
+impl Mean {
+    pub fn new(inp: Id, out: Id, axis: impl Into<Vec<usize>>, keep_dims: bool) -> Self {
+        let mut axis = axis.into();
+        // Reduce higher axes first to keep indexing valid as dims shrink
+        axis.sort_unstable_by(|a, b| b.cmp(a));
+        Self {
+            inp,
+            out,
+            axis,
+            keep_dims,
+        }
+    }
+}
+
+impl<D: Floating + 'static> Op<D> for Mean {
+    fn name(&self) -> &'static str {
+        "mean"
+    }
+
+    fn eval(&self, ctx: &mut Context<D>) {
+        let x = ctx.checked_get(&self.inp).clone();
+        let mut t = x.clone();
+        // sum along axes
+        for ax in &self.axis {
+            let a = Axis(*ax);
+            t = if self.keep_dims {
+                t.sum_axis(a).insert_axis(a)
+            } else {
+                t.sum_axis(a)
+            };
+        }
+
+        // divide by the count of reduced elements
+        let shape = x.shape().to_vec();
+        let mut denom = D::one();
+        for &ax in &self.axis {
+            denom = denom * D::from_f64(shape[ax] as f64);
+        }
+        // If no axes provided, denom=1 and t==x; that's fine.
+        let t = t.mapv(|v| v / denom);
+        ctx.tensors.insert(self.out, t);
+    }
+
+    fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
+        // grad wrt x:
+        // - Create ones_like(x) by broadcasting scalar 1 to x's shape
+        // - counts_y = sum(ones_like(x), axis)  // same shape as output y
+        // - counts_bc = broadcast_like(counts_y, like=x)
+        // - og_bc = broadcast_like(og, like=x)
+        // - grad = og_bc / counts_bc
+        let og = *out_grads.first()?;
+
+        let one = {
+            let id = g.fresh();
+            g.push(Box::new(Const::new(D::one(), id)));
+            id
+        };
+
+        let ones_like_x = {
+            let out = g.fresh();
+            g.push(Box::new(BroadcastLike::new(one, self.inp, out)));
+            out
+        };
+
+        let counts_y = {
+            let out = g.fresh();
+            g.push(Box::new(Sum::new(
+                ones_like_x,
+                out,
+                self.axis.clone(),
+                self.keep_dims,
+            )));
+            out
+        };
+
+        let counts_bc = {
+            let out = g.fresh();
+            g.push(Box::new(BroadcastLike::new(counts_y, self.inp, out)));
+            out
+        };
+
+        let og_bc = {
+            let out = g.fresh();
+            g.push(Box::new(BroadcastLike::new(og, self.inp, out)));
+            out
+        };
+
+        let grad_x = {
+            let out = g.fresh();
+            g.push(Box::new(Div::new(og_bc, counts_bc, out)));
+            out
+        };
+
+        Some(vec![grad_x])
+    }
+
+    fn inputs(&self) -> Vec<Id> {
+        vec![self.inp]
+    }
+
+    fn outputs(&self) -> Vec<Id> {
+        vec![self.out]
+    }
+}
+
+impl Tracer {
+    pub fn mean(&self, _axis: Vec<usize>, _keep_dims: bool) -> Tracer {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+}
+
+impl<D: Floating + 'static> TraceSession<'_, D> {
+    pub fn mean(&mut self, a: Tracer, axis: Vec<usize>, keep_dims: bool) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(Mean::new(a.id(), out, axis, keep_dims), out)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn test_mean_forward() {
+        use crate::prelude::*;
+        use ndarray::arr2;
+
+        #[trace]
+        fn f(x: Tensor) -> Tensor {
+            x.mean(vec![1], false)
+        }
+
+        let traced = trace_fn::<f32>(f);
+        let x = arr2(&[[1., 3., 2.], [4., 0., 4.]]).into_dyn();
+        let (out,) = traced.eval()(&x);
+        let expected = x
+            .clone()
+            .into_dimensionality::<ndarray::Ix2>()
+            .unwrap()
+            .mean_axis(ndarray::Axis(1))
+            .unwrap()
+            .into_dyn();
+        assert_eq!(out, expected);
+    }
+}
