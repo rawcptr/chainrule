@@ -5,7 +5,7 @@ use crate::{
     context::Context,
     graph::Graph,
     identity::Id,
-    ops::{Add, Const},
+    ops::{Add, Const, Sum},
     tracing::TensorData,
 };
 
@@ -40,7 +40,7 @@ impl<D: Floating + 'static> TraceableFn<D> {
                 .collect(),
         )
     }
-    /// plucks a single
+
     pub fn eval<T, O>(&self) -> impl Fn(T) -> O
     where
         T: EvalArgs<D>,
@@ -50,42 +50,37 @@ impl<D: Floating + 'static> TraceableFn<D> {
     }
 
     pub fn grad(&self) -> Self {
-        // start a fresh graph and clone the forward graph into it
-        // bump the Id generator to avoid collisions with existing Ids
-        // reverse-mode over the original nodes, and append VJP ops
+        let mut g = self.graph.clone();
 
-        let mut g = Graph::<D>::new();
-        for op in &self.graph.nodes {
-            g.push(op.clone());
-        }
+        let mut final_output_id = *self
+            .outputs
+            .first()
+            .expect("Cannot differentiate a function with no outputs");
 
-        let mut max_id = 0usize;
-        for op in &self.graph.nodes {
-            for id in op.inputs().into_iter().chain(op.outputs().into_iter()) {
-                max_id = max_id.max(id.as_usize());
+        if self.outputs.len() > 1 {
+            for &output_id in self.outputs.iter().skip(1) {
+                let new_sum_id = g.fresh();
+                g.push(Box::new(Add::new(final_output_id, output_id, new_sum_id)));
+                final_output_id = new_sum_id;
             }
         }
 
-        for id in self.inputs.iter().chain(&self.outputs) {
-            max_id = max_id.max(id.as_usize())
-        }
-
-        for _ in 0..max_id {
-            let _ = g.fresh();
-        }
+        let scalar_output_id = g.fresh();
+        g.push(Box::new(Sum::new(
+            final_output_id,
+            scalar_output_id,
+            vec![],
+            false,
+        )));
 
         let mut gradients: HashMap<Id, Id> = HashMap::new();
         let seed = g.fresh();
         g.push(Const::boxed(D::one(), seed));
-        gradients.insert(
-            *self
-                .outputs
-                .first()
-                .expect("no gradient flowing in for node"),
-            seed,
-        );
+        gradients.insert(scalar_output_id, seed);
 
-        for node in self.graph.nodes.iter().rev() {
+        let vjp_nodes = g.nodes.clone();
+
+        for node in vjp_nodes.iter().rev() {
             let out_ids = node.outputs();
             let out_grads: Vec<_> = out_ids
                 .iter()
@@ -96,6 +91,7 @@ impl<D: Floating + 'static> TraceableFn<D> {
                 continue;
             }
 
+            // This is now valid because the loop isn't borrowing `g`.
             if let Some(inp_grad) = node.vjp(&mut g, &out_grads) {
                 for (inp, grad_contrib) in node.inputs().into_iter().zip(inp_grad) {
                     if let Some(existing) = gradients.get(&inp).copied() {
@@ -218,6 +214,9 @@ mod macros {
         5  => (a,b,c,d,e),
         6  => (a,b,c,d,e,f),
         7  => (a,b,c,d,e,f,g),
+        8  => (a,b,c,d,e,f,g,h),
+        9  => (a,b,c,d,e,f,g,h,i),
+       10  => (a,b,c,d,e,f,g,h,i,j),
     }
 
     impl_eval_outputs! {
@@ -228,5 +227,8 @@ mod macros {
         5  => (a,b,c,d,e),
         6  => (a,b,c,d,e,f),
         7  => (a,b,c,d,e,f,g),
+        8  => (a,b,c,d,e,f,g,h),
+        9  => (a,b,c,d,e,f,g,h,i),
+       10  => (a,b,c,d,e,f,g,h,i,j),
     }
 }
