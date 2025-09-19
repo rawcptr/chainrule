@@ -1,7 +1,7 @@
 use ndarray::Axis;
 
 use crate::{
-    Floating, Graph, Id,
+    Floating, Graph, Id, TraceSession, Tracer,
     context::Context,
     ops::{Op, broadcast::BroadcastLike},
 };
