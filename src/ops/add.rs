@@ -13,7 +13,6 @@ mod tests {
 
     #[test]
     fn test_add() {
-        
         #[trace]
         fn f(x: crate::Tensor, y: crate::Tensor) -> crate::Tensor {
             x + y
