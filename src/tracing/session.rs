@@ -2,7 +2,7 @@ use crate::{
     Floating,
     graph::Graph,
     identity::Id,
-    ops::{Add, Const, Input, Mul, Neg, Op, Sub},
+    ops::{Add, Const, Input, Mul, Neg, Op, Sub, div::Div},
     tracing::Tracer,
 };
 
@@ -58,5 +58,11 @@ where
     pub fn neg(&mut self, a: Tracer) -> Tracer {
         let out = self.g.fresh();
         self.emit(Neg::new(a.id(), out), out)
+    }
+    
+    #[must_use]
+    pub fn div(&mut self, a: Tracer, b: Tracer) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(Div::new(a.id(), b.id(), out), out)
     }
 }
