@@ -3,7 +3,13 @@ use ndarray::Axis;
 use crate::{
     Floating, Graph, Id, TraceSession, Tracer,
     context::Context,
-    ops::{Op, broadcast::BroadcastLike, constant::Const, div::Div, sum::Sum},
+    ops::{
+        Op,
+        broadcast::BroadcastLike,
+        constant::Const,
+        div::Div,
+        sum::{ReshapeForBroadcast, Sum},
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -66,18 +72,17 @@ impl<D: Floating + 'static> Op<D> for Mean {
         // - grad = og_bc / counts_bc
         let og = *out_grads.first()?;
 
+        // Step 1: Calculate the scaling factor (1 / N)
         let one = {
             let id = g.fresh();
             g.push(Box::new(Const::new(D::one(), id)));
             id
         };
-
         let ones_like_x = {
             let out = g.fresh();
             g.push(Box::new(BroadcastLike::new(one, self.inp, out)));
             out
         };
-
         let counts_y = {
             let out = g.fresh();
             g.push(Box::new(Sum::new(
@@ -89,23 +94,27 @@ impl<D: Floating + 'static> Op<D> for Mean {
             out
         };
 
-        let counts_bc = {
+        let scaled_og = {
             let out = g.fresh();
-            g.push(Box::new(BroadcastLike::new(counts_y, self.inp, out)));
+            g.push(Box::new(Div::new(og, counts_y, out)));
             out
         };
 
-        let og_bc = {
-            let out = g.fresh();
-            g.push(Box::new(BroadcastLike::new(og, self.inp, out)));
-            out
-        };
+        // reshape the scaled gradient to make it broadcast-compatible
+        let reshaped_grad_id = g.fresh();
+        g.push(Box::new(ReshapeForBroadcast::new(
+            scaled_og,
+            reshaped_grad_id,
+            self.axis.clone(),
+            self.keep_dims,
+        )));
 
-        let grad_x = {
-            let out = g.fresh();
-            g.push(Box::new(Div::new(og_bc, counts_bc, out)));
-            out
-        };
+        let grad_x = g.fresh();
+        g.push(Box::new(BroadcastLike::new(
+            reshaped_grad_id,
+            self.inp,
+            grad_x,
+        )));
 
         Some(vec![grad_x])
     }
