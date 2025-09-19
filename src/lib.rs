@@ -45,6 +45,9 @@
 //! let expected = x.dot(&w) + &b;
 //! assert_eq!(out, expected.into_dyn());
 //! ```
+//!
+
+use core::fmt::Debug;
 
 use num_traits::{Float, NumOps};
 
