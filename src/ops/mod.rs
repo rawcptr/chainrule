@@ -68,7 +68,7 @@ pub mod macros {
     ///
     /// fwd: |x: Tensor, y: Tensor| -> Tensor;
     /// vjp: |self, g: Graph, og: &[Id]| -> Option<Vec<ID>>;
-    macro_rules! binary_op {
+    macro_rules! primitive_binary_op {
         ($name:ident, disp: $strname:expr, fwd: $forward:expr, vjp: $vjp_rule:expr) => {
             #[derive(Debug, Clone)]
             #[non_exhaustive]
@@ -79,7 +79,11 @@ pub mod macros {
             }
 
             impl $name {
-                pub fn new(lhs: Id, rhs: Id, out: Id) -> Self {
+                pub fn new(
+                    lhs: $crate::identity::Id,
+                    rhs: $crate::identity::Id,
+                    out: $crate::identity::Id,
+                ) -> Self {
                     Self { lhs, rhs, out }
                 }
             }
@@ -88,7 +92,7 @@ pub mod macros {
                 fn vjp(
                     &self,
                     g: &mut $crate::graph::Graph<D>,
-                    out_grads: &[Id],
+                    out_grads: &[$crate::identity::Id],
                 ) -> Option<Vec<Id>> {
                     let og = *out_grads.first()?;
                     Some($vjp_rule(self, g, og))
@@ -104,11 +108,11 @@ pub mod macros {
                     ctx.tensors.insert(self.out, ($forward)(x, y));
                 }
 
-                fn inputs(&self) -> Vec<Id> {
+                fn inputs(&self) -> Vec<$crate::identity::Id> {
                     vec![self.lhs, self.rhs]
                 }
 
-                fn outputs(&self) -> Vec<Id> {
+                fn outputs(&self) -> Vec<$crate::identity::Id> {
                     vec![self.out]
                 }
             }

@@ -1,6 +1,6 @@
-use crate::{binary_op, graph::Graph, identity::Id, ops::neg::Neg, tracing::TensorData};
+use crate::{graph::Graph, identity::Id, ops::neg::Neg, primitive_binary_op, tracing::TensorData};
 
-binary_op!(
+primitive_binary_op!(
     Sub,
     disp:  "sub",
     fwd: |x: TensorData<D>, y: TensorData<D>| x - y,

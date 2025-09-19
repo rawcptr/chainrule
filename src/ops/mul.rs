@@ -1,6 +1,6 @@
-use crate::{binary_op, graph::Graph, identity::Id, tracing::TensorData};
+use crate::{graph::Graph, identity::Id, primitive_binary_op, tracing::TensorData};
 
-binary_op!(
+primitive_binary_op!(
     Mul,
     disp: "mul",
     fwd: |x: TensorData<D>, y: TensorData<D>| x * y,
