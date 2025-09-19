@@ -2,6 +2,15 @@
 name = "chainrule"
 version = "0.1.0"
 edition = "2024"
+description = "A minimal automatic differentiation library in Rust, inspired by the functional, composable architecture of JAX."
+repository = "https://github.com/rawcptr/chainrule"
+readme = "README.md"
+license = "BSD-3-Clause"
+keywords = ["autograd", "autodiff", "numeric"]
+
+
+[features]
+nightly-fn = []
 
 [dependencies]
 ndarray = "0.16.1"
