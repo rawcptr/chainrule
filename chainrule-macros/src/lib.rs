@@ -63,6 +63,7 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+#[derive(Debug, Clone)]
 struct TraceRewriter {
     sess_ident: syn::Ident,
     counter: usize,
@@ -132,31 +133,44 @@ impl Fold for TraceRewriter {
                     _ => Expr::Lit(lit),
                 }
             }
-
             Expr::MethodCall(mc) => {
-                let receiver = self.fold_expr(*mc.receiver.clone());
-                let args: Vec<_> = mc
-                    .args
-                    .clone()
-                    .into_iter()
-                    .map(|a| self.fold_expr(a))
-                    .collect();
+                let receiver = self.fold_expr(*mc.receiver);
+                let args: Vec<_> = mc.args.into_iter().map(|a| self.fold_expr(a)).collect();
+                let method = mc.method.clone();
                 let sess = &self.sess_ident;
 
-                match mc.method.to_string().as_str() {
-                    "matmul" => syn::parse_quote! { #sess.matmul(#receiver, #(#args),*) },
-                    "t" => syn::parse_quote! { #sess.t(#receiver) },
-                    "transpose" => syn::parse_quote! { #sess.transpose(#receiver, #(#args),*) },
-                    "reshape" => syn::parse_quote! { #sess.reshape(#receiver, #(#args),*) },
-                    "broadcast" => syn::parse_quote! { #sess.broadcast(#receiver, #(#args),*) },
-                    "sum" => syn::parse_quote! { #sess.sum(#receiver, #(#args),*) },
-                    "exp" => syn::parse_quote! { #sess.exp(#receiver) },
-                    "log" => syn::parse_quote! { #sess.log(#receiver) },
-                    "relu" => syn::parse_quote! { #sess.relu(#receiver) },
-                    "div" => syn::parse_quote! { #sess.div(#receiver, #(#args),*) },
-                    "max" => syn::parse_quote! { #sess.max(#receiver, #(#args),*) },
-                    "mean" => syn::parse_quote! { #sess.mean(#receiver, #(#args),*) },
-                    _ => syn::parse_quote! { #receiver.#mc.method(#(#args),*) }, // let it go untouched
+                let wrap_sess_call = |call: proc_macro2::TokenStream| {
+                    let tmp_out = self.clone().fresh("tmp_out");
+                    syn::parse_quote! {{
+                        let #tmp_out = #call;
+                        #tmp_out
+                    }}
+                };
+
+                match method.to_string().as_str() {
+                    "matmul" => wrap_sess_call(quote! { #sess.matmul(#receiver, #(#args),*) }),
+                    "t" => wrap_sess_call(quote! { #sess.t(#receiver) }),
+                    "transpose" => {
+                        wrap_sess_call(quote! { #sess.transpose(#receiver, #(#args),*) })
+                    }
+                    "reshape" => wrap_sess_call(quote! { #sess.reshape(#receiver, #(#args),*) }),
+                    "broadcast" => {
+                        wrap_sess_call(quote! { #sess.broadcast(#receiver, #(#args),*) })
+                    }
+                    "sum" => wrap_sess_call(quote! { #sess.sum(#receiver, #(#args),*) }),
+                    "exp" => wrap_sess_call(quote! { #sess.exp(#receiver) }),
+                    "log" => wrap_sess_call(quote! { #sess.log(#receiver) }),
+                    "relu" => wrap_sess_call(quote! { #sess.relu(#receiver) }),
+                    "div" => wrap_sess_call(quote! { #sess.div(#receiver, #(#args),*) }),
+                    "max" => wrap_sess_call(quote! { #sess.max(#receiver, #(#args),*) }),
+                    "mean" => wrap_sess_call(quote! { #sess.mean(#receiver, #(#args),*) }),
+                    _ => {
+                        let tmp_out = self.fresh("tmp_out");
+                        syn::parse_quote! {{
+                            let #tmp_out = #receiver.#method(#(#args),*);
+                            #tmp_out
+                        }}
+                    }
                 }
             }
             other => fold::fold_expr(self, other),
