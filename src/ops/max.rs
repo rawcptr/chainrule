@@ -146,13 +146,12 @@ impl<D: Floating + 'static> Op<D> for MaxGradMask {
             y.shape(),
             "max grad mask: x and y must have the same shape"
         );
-        let mask: Vec<_> = x
-            .iter()
-            .zip(&y)
-            .map(|(a, b)| if a == b { D::one() } else { D::zero() })
-            .collect();
-        ctx.tensors
-            .insert(self.out, ndarray::Array::from_vec(mask).into_dyn());
+
+        let mask = ndarray::Zip::from(x.view())
+            .and(y.view())
+            .map_collect(|&a, &b| if a == b { D::one() } else { D::zero() });
+
+        ctx.tensors.insert(self.out, mask);
     }
 
     fn vjp(&self, _g: &mut Graph<D>, _out_grads: &[Id]) -> Option<Vec<Id>> {
