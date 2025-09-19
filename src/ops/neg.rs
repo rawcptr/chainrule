@@ -57,7 +57,7 @@ mod tests {
         let traced = trace_fn::<f32>(f);
 
         let x = arr1(&[2., -3., 4.]).into_dyn();
-        let out = traced.eval()(&x);
+        let (out,) = traced.eval()(&x);
         let expected = -&x;
         assert_eq!(out, expected);
     }

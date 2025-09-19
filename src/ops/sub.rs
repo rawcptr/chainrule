@@ -32,7 +32,7 @@ mod tests {
 
         let x = arr1(&[5., 6.]).into_dyn();
         let y = arr1(&[2., 3.]).into_dyn();
-        let out = traced.eval()((&x, &y));
+        let (out,) = traced.eval()((&x, &y));
         let expected = &x - &y;
         assert_eq!(out, expected);
     }

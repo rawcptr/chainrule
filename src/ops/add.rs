@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn test_add() {
-
+        
         #[trace]
         fn f(x: crate::Tensor, y: crate::Tensor) -> crate::Tensor {
             x + y
@@ -23,7 +23,7 @@ mod tests {
 
         let x = ndarray::arr1(&[1., 2., 3.]).into_dyn();
         let y = ndarray::arr1(&[10., 20., 30.]).into_dyn();
-        let out = traced.eval()((&x, &y));
+        let (out,) = traced.eval()((&x, &y));
         let expected = &x + &y;
         assert_eq!(out, expected);
     }
