@@ -1,5 +1,6 @@
 use crate::{Floating, context::Context, graph::Graph, identity::Id, tracing::TensorData};
 
+#[derive(Debug, Clone)]
 pub struct TraceableFn<D: Floating> {
     pub graph: Graph<D>,
     pub inputs: Vec<Id>,
