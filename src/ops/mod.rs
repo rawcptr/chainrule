@@ -5,7 +5,9 @@ pub mod input;
 pub mod matmul;
 pub mod mul;
 pub mod neg;
+pub mod reshape;
 pub mod sub;
+pub mod sum;
 pub mod transpose;
 
 use core::fmt::Debug;
@@ -16,7 +18,9 @@ pub use input::Input;
 pub use matmul::MatMul;
 pub use mul::Mul;
 pub use neg::Neg;
+pub use reshape::Reshape;
 pub use sub::Sub;
+pub use sum::Sum;
 pub use transpose::{Transpose, TransposeDefault};
 
 use crate::{context::Context, graph::Graph, identity::Id};
