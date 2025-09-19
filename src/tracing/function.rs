@@ -129,6 +129,6 @@ mod macros {
         4  => (a,b,c,d),
         5  => (a,b,c,d,e),
         6  => (a,b,c,d,e,f),
-        7  => (a,b,c,d,e,f,g)
+        7  => (a,b,c,d,e,f,g),
     }
 }
