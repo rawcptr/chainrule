@@ -33,24 +33,49 @@ impl<D: Floating> Op<D> for Sum {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let mut t = ctx.checked_get(&self.inp).clone();
-        for axis in &self.axis {
-            let a = Axis(*axis);
-            t = if self.keep_dims {
-                t.sum_axis(a).insert_axis(a)
-            } else {
-                t.sum_axis(a)
+        let t_in = ctx.checked_get(&self.inp).clone();
+
+        let result = if self.axis.is_empty() {
+            // If no axes are specified, sum all elements to a scalar.
+            let sum_val = t_in.sum();
+            ndarray::arr0(sum_val).into_dyn()
+        } else {
+            // else sum along the specified axes.
+            let mut t = t_in;
+            for axis in &self.axis {
+                let a = Axis(*axis);
+                t = if self.keep_dims {
+                    t.sum_axis(a).insert_axis(a)
+                } else {
+                    t.sum_axis(a)
+                }
             }
-        }
-        ctx.tensors.insert(self.out, t);
+            t
+        };
+
+        ctx.tensors.insert(self.out, result);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
         // d/dx sum(x, axis) = broadcast_like(og, like=x)
         let grad_y = *out_grads.first()?;
-        let out = g.fresh();
-        g.push(Box::new(BroadcastLike::new(grad_y, self.inp, out)));
-        Some(vec![out])
+        let reshaped_grad_id = g.fresh();
+
+        g.push(Box::new(ReshapeForBroadcast::new(
+            grad_y,
+            reshaped_grad_id,
+            self.axis.clone(),
+            self.keep_dims,
+        )));
+
+        let broadcast_out_id = g.fresh();
+        g.push(Box::new(BroadcastLike::new(
+            reshaped_grad_id,
+            self.inp,
+            broadcast_out_id,
+        )));
+
+        Some(vec![broadcast_out_id])
     }
 
     fn inputs(&self) -> Vec<Id> {
@@ -95,39 +120,57 @@ impl<D: Floating> Op<D> for ReduceToLike {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
+        use ndarray::Axis;
+
         let mut t = ctx.checked_get(&self.inp).clone();
         let like = ctx.checked_get(&self.like);
-        let a_shape = t.shape().to_vec();
-        let b_shape = like.shape().to_vec();
+        let a_shape = t.shape().to_owned();
+        let b_shape = like.shape();
+
+        if a_shape == b_shape {
+            ctx.tensors.insert(self.out, t);
+            return;
+        }
 
         assert!(
             a_shape.len() >= b_shape.len(),
-            "reduce_to_like: rank(inp) < rank(like)"
+            "reduce_to_like: rank(inp) < rank(like). inp: {:?}, like: {:?}",
+            a_shape,
+            b_shape
         );
 
-        let offset = a_shape.len() - b_shape.len();
-        // Any leading extra dims must be reduced away
-        let mut axes: Vec<usize> = (0..offset).collect();
+        let rank_diff = a_shape.len() - b_shape.len();
 
-        // for aligned dims, if they differ, we can only reduce if like=1.
+        let mut axes_to_process: Vec<(usize, bool)> = Vec::new();
+
+        for i in 0..rank_diff {
+            axes_to_process.push((i, false));
+        }
+
         for i in 0..b_shape.len() {
-            let a = a_shape[offset + i];
-            let b = b_shape[i];
-            if a == b {
-                continue;
-            } else if b == 1 {
-                axes.push(offset + i);
-            } else {
-                panic!(
-                    "reduce_to_like: incompatible dims: inp dim {} vs like dim {} at axis {}",
-                    a, b, i
+            let a_idx = i + rank_diff;
+            if a_shape[a_idx] != b_shape[i] {
+                // the only valid mismatch is reducing to a dimension of 1.
+                assert_eq!(
+                    b_shape[i], 1,
+                    "reduce_to_like: incompatible dims, can only reduce to 1. inp: {:?}, like: {:?}",
+                    a_shape, b_shape
                 );
+                axes_to_process.push((a_idx, true));
             }
         }
 
-        axes.sort_unstable_by(|x, y| y.cmp(x));
-        for ax in axes {
-            t = t.sum_axis(ndarray::Axis(ax));
+        // Reduce higher axes first to keep indexing valid as dims shrink.
+        axes_to_process.sort_unstable_by_key(|&(axis, _)| std::cmp::Reverse(axis));
+
+        for (ax_idx, keep_dim) in axes_to_process {
+            t = if keep_dim {
+                // Case 1: Keep the dimension for broadcasting.
+                t.sum_axis(Axis(ax_idx)).insert_axis(Axis(ax_idx))
+            } else {
+                // Case 2: Remove the dimension for rank difference.
+                t.sum_axis(Axis(ax_idx))
+            };
         }
 
         assert_eq!(
@@ -155,5 +198,65 @@ impl<D: Floating> Op<D> for ReduceToLike {
     }
     fn outputs(&self) -> Vec<Id> {
         vec![self.out]
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReshapeForBroadcast {
+    inp_grad: Id,
+    out: Id,
+    axis: Vec<usize>,
+    keep_dims: bool,
+}
+
+impl ReshapeForBroadcast {
+    pub fn new(inp_grad: Id, out: Id, axis: Vec<usize>, keep_dims: bool) -> Self {
+        Self {
+            inp_grad,
+            out,
+            axis,
+            keep_dims,
+        }
+    }
+}
+
+impl<D: Floating> Op<D> for ReshapeForBroadcast {
+    fn name(&self) -> &'static str {
+        "reshape_for_broadcast"
+    }
+    fn inputs(&self) -> Vec<Id> {
+        vec![self.inp_grad]
+    }
+    fn outputs(&self) -> Vec<Id> {
+        vec![self.out]
+    }
+    fn vjp(&self, _: &mut Graph<D>, _: &[Id]) -> Option<Vec<Id>> {
+        None
+    }
+
+    fn eval(&self, ctx: &mut Context<D>) {
+        let inp_grad_tensor = ctx.checked_get(&self.inp_grad).clone();
+
+        // If keep_dims was true, or if it was a full reduction to a scalar,
+        // the shape is already correct for broadcasting. No op needed.
+        if self.keep_dims || self.axis.is_empty() {
+            ctx.tensors.insert(self.out, inp_grad_tensor);
+            return;
+        }
+
+        let mut intermediate_shape = inp_grad_tensor.shape().to_vec();
+        let mut sorted_axes = self.axis.clone();
+        sorted_axes.sort_unstable(); // Sort to insert into the correct positions
+
+        for &axis in &sorted_axes {
+            intermediate_shape.insert(axis, 1);
+        }
+
+        let reshaped_tensor = inp_grad_tensor
+            .to_shape(intermediate_shape)
+            .unwrap()
+            .to_owned()
+            .into_dyn();
+        ctx.tensors.insert(self.out, reshaped_tensor);
     }
 }
