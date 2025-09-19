@@ -6,6 +6,8 @@ use crate::{
     ops::Op,
 };
 
+pub type Node<T> = Vec<Box<dyn Op<T>>>;
+
 #[derive(Debug, Clone)]
 pub struct Graph<DType = f32, G: IdGenerator = FreeList> {
     pub nodes: Node<DType>,
