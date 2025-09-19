@@ -17,19 +17,9 @@ impl Tracer {
     pub fn id(&self) -> Id {
         self.id
     }
-}
 
-impl Tracer {
-    pub fn t(&self) -> Self {
-        panic!("dummy operation - only allowed inside #[trace] function")
-    }
-
-    pub fn transpose(&self, _a1: usize, _a2: usize) -> Self {
-        panic!("dummy operation - only allowed inside #[trace] function")
-    }
-
-    pub fn matmul(&self, _other: &Self) -> Self {
-        panic!("dummy operation - only allowed inside #[trace] function")
+    pub fn shape(&self) -> Vec<usize> {
+        panic!("dummy shape function - only allowed inside #[trace] functions")
     }
 }
 
