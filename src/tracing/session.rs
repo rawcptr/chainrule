@@ -10,15 +10,15 @@ use crate::{
     tracing::Tracer,
 };
 
-pub struct TraceSession<'a, DType: Floating> {
-    g: &'a mut Graph<DType>,
+pub struct TraceSession<'graph, DType: Floating> {
+    g: &'graph mut Graph<DType>,
 }
 
-impl<'a, D> TraceSession<'a, D>
+impl<D> TraceSession<'_, D>
 where
     D: Floating + 'static,
 {
-    pub fn new(g: &mut Graph<D>) -> TraceSession<'_, D> {
+    pub const fn new(g: &mut Graph<D>) -> TraceSession<'_, D> {
         TraceSession { g }
     }
 
