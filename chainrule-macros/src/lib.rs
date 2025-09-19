@@ -51,6 +51,7 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
             panic!("This function is only usable through trace_fn!");
         }
 
+        #[allow(unused_parens)]
         #fn_vis fn #fn_name<'a, D: #chainrule::Floating + 'static>(
             sess: &mut #chainrule::TraceSession<'a, D>,
         ) -> (Vec<#chainrule::identity::Id>, #chainrule::tracing::Tracer) {
@@ -93,12 +94,12 @@ impl Fold for TraceRewriter {
                     BinOp::Sub(_) => syn::parse_quote! {{
                         let #tmp_l = #lhs;
                         let #tmp_r = #rhs;
-                        #sess.sub(#lhs, #rhs)
+                        #sess.sub(#tmp_l, #tmp_r)
                     }},
                     BinOp::Mul(_) => syn::parse_quote! {{
                         let #tmp_l = #lhs;
                         let #tmp_r = #rhs;
-                        #sess.mul(#lhs, #rhs)
+                        #sess.mul(#tmp_l, #tmp_r)
                     }},
                     _ => syn::parse_quote! {
                         compile_error!("unsupported operator in #[trace] fn")
@@ -107,11 +108,13 @@ impl Fold for TraceRewriter {
             }
             Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => {
                 let inner = self.fold_expr(*u.expr);
-                let tmp = self.fresh("tmp_neg");
+                let tmp_in = self.fresh("tmp_in");
+                let tmp_res = self.fresh("tmp_neg");
                 let sess = &self.sess_ident;
                 syn::parse_quote! {{
-                    let #tmp = #inner;
-                    #sess.neg(#tmp)
+                    let #tmp_in = #inner;
+                    let #tmp_res = #sess.neg(#tmp_in);
+                    #tmp_res
                 }}
             }
             Expr::Lit(lit) => {
