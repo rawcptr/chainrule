@@ -11,9 +11,14 @@ primitive_binary_op!(
     fwd: |x: TensorData<D>, y: TensorData<D>| x / y,
     vjp: |this: &Div, g: &mut Graph<D>, og: Id| {
         // d/dx (x/y) = 1/y
+        let one_id = {
+            let id = g.fresh();
+            g.push(Box::new(Const::new(D::one(), id)));
+            id
+        };
         let inv_rhs = {
             let out = g.fresh();
-            g.push(Box::new(Div::new(Const::new(D::one(), out).out, this.rhs, out)));
+            g.push(Box::new(Div::new(one_id, this.rhs, out)));
             out
         };
         let grad_lhs = {
