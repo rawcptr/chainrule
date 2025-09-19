@@ -31,11 +31,14 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
     let shape_a = a.shape();
     let shape_b = b.shape();
 
-    assert!(shape_a.len() >= 2 && shape_b.len() >= 2);
+    assert!(
+        shape_a.len() >= 2 && shape_b.len() >= 2,
+        "shapes are not valid for batched matrix multiply"
+    );
 
     let (m, k1) = (shape_a[shape_a.len() - 2], shape_a[shape_a.len() - 1]);
     let (k2, n) = (shape_b[shape_b.len() - 2], shape_b[shape_b.len() - 1]);
-    assert_eq!(k1, k2, "Matrix multiply inner dims mismatch");
+    assert_eq!(k1, k2, "matrix multiply inner dims mismatch");
 
     let batch_a = &shape_a[..shape_a.len() - 2];
     let batch_b = &shape_b[..shape_b.len() - 2];
@@ -112,7 +115,7 @@ pub fn matmul<D: Floating + 'static>(a: TensorData<D>, b: TensorData<D>) -> Tens
         (2, 2) => {
             let (m, k1) = (a.shape()[0], a.shape()[1]);
             let (k2, n) = (b.shape()[0], b.shape()[1]);
-            assert_eq!(k1, k2);
+            assert_eq!(k1, k2, "inner dimension {k1} != {k2}");
 
             let a2 = a.view().into_dimensionality::<Ix2>().unwrap();
             let b2 = b.view().into_dimensionality::<Ix2>().unwrap();
@@ -181,7 +184,7 @@ mod tests {
         let w = arr2(&[[5., 6.], [7., 8.]]);
         let x2 = arr2(&[[1., 2.], [3., 4.]]).into_dyn();
         let w2 = arr2(&[[5., 6.], [7., 8.]]).into_dyn();
-        let out = traced.eval()((&x2, &w2));
+        let (out,) = traced.eval()((&x2, &w2));
         let expected = x.dot(&w);
         assert_eq!(out, expected.into_dyn());
     }
