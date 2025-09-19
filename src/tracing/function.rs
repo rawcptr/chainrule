@@ -133,6 +133,21 @@ pub trait EvalOutputs<D> {
     fn from_vec(f: Vec<TensorData<D>>) -> Self;
 }
 
+use ndarray::{ArrayBase, Data, Dimension};
+
+pub trait ToTensorData<D: Floating> {
+    fn to_tensor(&self) -> TensorData<D>;
+}
+
+impl<D: Floating, S, Dim> ToTensorData<D> for ArrayBase<S, Dim>
+where
+    S: Data<Elem = D>,
+    Dim: Dimension,
+{
+    fn to_tensor(&self) -> TensorData<D> {
+        self.to_owned().into_dyn()
+    }
+}
 mod macros {
     use super::{EvalArgs, EvalOutputs, Floating, TensorData};
     macro_rules! as_owned_ty {
@@ -141,6 +156,7 @@ mod macros {
         };
     }
 
+    #[allow(unused)]
     macro_rules! as_ref_ty {
         ($_:ident, $D:ident) => {
             &TensorData<$D>
@@ -177,20 +193,22 @@ mod macros {
     }
 
     macro_rules! impl_eval_args {
-        ( $( $len:literal => ( $( $name:ident ),+ ) ),+ $(,)? ) => {
-            $(
-                #[allow(unused_parens, reason = "macro complains because impl sig has a parenthesis")]
-                impl<D: Floating> EvalArgs<D>
-                for ( $( as_ref_ty!($name, D) ),+ )
-                {
-                    fn pack(self) -> Vec<TensorData<D>> {
-                        let ( $( $name ),+ ) = self;
-                        vec![ $( $name.clone() ),+ ]
-                    }
+    ( $( $len:literal => ( $( $name:ident ),+ ) ),+ $(,)? ) => {
+        $(
+            #[allow(unused_parens, non_camel_case_types)]
+            impl<D, $( $name ),+> EvalArgs<D> for ( $( &$name ),+ )
+            where
+                D: Floating,
+                $( $name: $crate::tracing::function::ToTensorData<D> ),+
+            {
+                fn pack(self) -> Vec<TensorData<D>> {
+                    let ( $( $name ),+ ) = self;
+                    vec![ $( $name.to_tensor() ),+ ]
                 }
-            )+
-        };
-    }
+            }
+        )+
+    };
+}
 
     impl_eval_args! {
         1  => (a),
