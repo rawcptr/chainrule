@@ -144,6 +144,8 @@ impl Fold for TraceRewriter {
                     "log" => syn::parse_quote! { #sess.log(#receiver) },
                     "relu" => syn::parse_quote! { #sess.relu(#receiver) },
                     "div" => syn::parse_quote! { #sess.div(#receiver, #(#args),*) },
+                    "max" => syn::parse_quote! { #sess.max(#receiver, #(#args),*) },
+                    "mean" => syn::parse_quote! { #sess.mean(#receiver, #(#args),*) },
                     _ => syn::parse_quote! { #receiver.#mc.method(#(#args),*) }, // let it go untouched
                 }
             }
