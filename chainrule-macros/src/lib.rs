@@ -137,40 +137,43 @@ impl Fold for TraceRewriter {
                 let receiver = self.fold_expr(*mc.receiver);
                 let args: Vec<_> = mc.args.into_iter().map(|a| self.fold_expr(a)).collect();
                 let method = mc.method.clone();
+                let recv_tmp = self.fresh("recv");
+                let out_tmp = self.fresh("tmp_out");
+                let arg_tmps: Vec<syn::Ident> =
+                    (0..args.len()).map(|_| self.fresh("arg")).collect();
                 let sess = &self.sess_ident;
 
-                let wrap_sess_call = |call: proc_macro2::TokenStream| {
-                    let tmp_out = self.clone().fresh("tmp_out");
-                    syn::parse_quote! {{
-                        let #tmp_out = #call;
-                        #tmp_out
-                    }}
-                };
+                // List of ops we route through the session
+                let is_traced = matches!(
+                    method.to_string().as_str(),
+                    "matmul"
+                        | "t"
+                        | "transpose"
+                        | "reshape"
+                        | "broadcast"
+                        | "sum"
+                        | "exp"
+                        | "log"
+                        | "relu"
+                        | "div"
+                        | "max"
+                        | "mean"
+                );
 
-                match method.to_string().as_str() {
-                    "matmul" => wrap_sess_call(quote! { #sess.matmul(#receiver, #(#args),*) }),
-                    "t" => wrap_sess_call(quote! { #sess.t(#receiver) }),
-                    "transpose" => {
-                        wrap_sess_call(quote! { #sess.transpose(#receiver, #(#args),*) })
-                    }
-                    "reshape" => wrap_sess_call(quote! { #sess.reshape(#receiver, #(#args),*) }),
-                    "broadcast" => {
-                        wrap_sess_call(quote! { #sess.broadcast(#receiver, #(#args),*) })
-                    }
-                    "sum" => wrap_sess_call(quote! { #sess.sum(#receiver, #(#args),*) }),
-                    "exp" => wrap_sess_call(quote! { #sess.exp(#receiver) }),
-                    "log" => wrap_sess_call(quote! { #sess.log(#receiver) }),
-                    "relu" => wrap_sess_call(quote! { #sess.relu(#receiver) }),
-                    "div" => wrap_sess_call(quote! { #sess.div(#receiver, #(#args),*) }),
-                    "max" => wrap_sess_call(quote! { #sess.max(#receiver, #(#args),*) }),
-                    "mean" => wrap_sess_call(quote! { #sess.mean(#receiver, #(#args),*) }),
-                    _ => {
-                        let tmp_out = self.fresh("tmp_out");
-                        syn::parse_quote! {{
-                            let #tmp_out = #receiver.#method(#(#args),*);
-                            #tmp_out
-                        }}
-                    }
+                if is_traced {
+                    syn::parse_quote! {{
+                        let #recv_tmp = #receiver;
+                        #( let #arg_tmps = #args; )*
+                        let #out_tmp = #sess.#method(#recv_tmp #(, #arg_tmps )* );
+                        #out_tmp
+                    }}
+                } else {
+                    syn::parse_quote! {{
+                        let #recv_tmp = #receiver;
+                        #( let #arg_tmps = #args; )*
+                        let #out_tmp = #recv_tmp.#method(#( #arg_tmps ),* );
+                        #out_tmp
+                    }}
                 }
             }
             other => fold::fold_expr(self, other),
