@@ -39,21 +39,21 @@ macro_rules! as_ref_ty {
     };
 }
 
-macro_rules! impl_eval_args {
-    ( $( $len:literal => ( $( $name:ident ),+ ) ),+ $(,)? ) => {
-        $(
-            #[allow(unused_parens)]
-            impl<'a, D: Floating> EvalArgs<D>
-                for ( $( as_ref_ty!($name, 'a, D) ),+ )
-            {
-                fn pack(self) -> Vec<TensorData<D>> {
-                    let ( $( $name ),+ ) = self;
-                    vec![ $( $name.clone() ),+ ]
+    macro_rules! impl_eval_args {
+        ( $( $len:literal => ( $( $name:ident ),+ ) ),+ $(,)? ) => {
+            $(
+                #[allow(unused_parens, reason = "macro complains because impl sig has a parenthesis")]
+                impl<D: Floating> EvalArgs<D>
+                for ( $( as_ref_ty!($name, D) ),+ )
+                {
+                    fn pack(self) -> Vec<TensorData<D>> {
+                        let ( $( $name ),+ ) = self;
+                        vec![ $( $name.clone() ),+ ]
+                    }
                 }
-            }
-        )+
-    };
-}
+            )+
+        };
+    }
 
 impl_eval_args! {
     1  => (a),
