@@ -102,10 +102,10 @@ impl<D: Floating + 'static> crate::tracing::session::TraceSession<'_, D> {
 }
 
 impl Tracer {
-    pub fn transpose(&self, _: Tracer, _: usize, _: usize) -> Tracer {
+    pub fn transpose(&self, _: usize, _: usize) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
-    pub fn t(&self, _: Tracer) -> Tracer {
+    pub fn t(&self) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
