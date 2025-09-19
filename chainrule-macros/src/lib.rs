@@ -139,7 +139,14 @@ impl Fold for TraceRewriter {
                     "matmul" => syn::parse_quote! { #sess.matmul(#receiver, #(#args),*) },
                     "t" => syn::parse_quote! { #sess.t(#receiver) },
                     "transpose" => syn::parse_quote! { #sess.transpose(#receiver, #(#args),*) },
-                    _ => syn::parse_quote! { #receiver.#mc.method(#(#args),*) }, // untouched
+                    "reshape" => syn::parse_quote! { #sess.reshape(#receiver, #(#args),*) },
+                    "broadcast" => syn::parse_quote! { #sess.broadcast(#receiver, #(#args),*) },
+                    "sum" => syn::parse_quote! { #sess.sum(#receiver, #(#args),*) },
+                    "exp" => syn::parse_quote! { #sess.exp(#receiver) },
+                    "log" => syn::parse_quote! { #sess.log(#receiver) },
+                    "relu" => syn::parse_quote! { #sess.relu(#receiver) },
+                    "div" => syn::parse_quote! { #sess.div(#receiver, #(#args),*) },
+                    _ => syn::parse_quote! { #receiver.#mc.method(#(#args),*) }, // let it go untouched
                 }
             }
             other => fold::fold_expr(self, other),
