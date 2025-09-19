@@ -12,7 +12,7 @@ impl Input {
 }
 
 impl<D: Floating + 'static> Op<D> for Input {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "input"
     }
 

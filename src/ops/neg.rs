@@ -10,13 +10,13 @@ impl Neg {
     pub fn new(inp: Id, out: Id) -> Neg {
         Self { inp, out }
     }
-    pub fn boxed(inp: Id, out: Id) -> Box<Neg> {
+    pub fn boxed(inp: Id, out: Id) -> Box<Self> {
         Box::new(Self::new(inp, out))
     }
 }
 
 impl<D: Floating> Op<D> for Neg {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "neg"
     }
 
@@ -26,7 +26,7 @@ impl<D: Floating> Op<D> for Neg {
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
-        let og = out_grads[0];
+        let og = *out_grads.first()?;
         let out = g.fresh();
         g.push(Self::boxed(og, out));
         Some(vec![out])

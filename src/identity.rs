@@ -1,5 +1,7 @@
+use core::hash::Hash;
+
 pub trait IdGenerator {
-    type Id: Copy + Eq + std::hash::Hash;
+    type Id: Copy + Eq + Hash;
     fn fresh(&mut self) -> Self::Id;
     fn release(&mut self, id: Self::Id);
 }
@@ -12,13 +14,14 @@ pub mod generators {
 
     use crate::identity::{self, IdGenerator};
 
+    #[derive(Debug, Clone)]
     pub struct FreeList {
         counter: usize,
         freelist: VecDeque<usize>,
     }
 
     impl FreeList {
-        pub fn new() -> FreeList {
+        pub fn new() -> Self {
             Self {
                 counter: 0,
                 freelist: VecDeque::new(),

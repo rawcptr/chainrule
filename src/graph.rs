@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use core::fmt::{Display, Formatter, Result as FmtResult};
 
 use crate::{
     Floating,
@@ -35,7 +35,7 @@ impl Default for Graph {
 }
 
 impl<D: Floating> Display for Graph<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         for (i, node) in self.nodes.iter().enumerate() {
             writeln!(
                 f,

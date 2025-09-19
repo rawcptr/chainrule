@@ -49,7 +49,7 @@
 use num_traits::{Float, NumOps};
 
 /// Blanket floating scalar trait for tensors.
-pub trait Floating: std::fmt::Debug + Float + NumOps {
+pub trait Floating: Debug + Float + NumOps {
     fn from_f64(val: f64) -> Self;
 }
 

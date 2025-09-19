@@ -1,4 +1,4 @@
-use crate::{Floating, identity::Id, ops::Op};
+use crate::{Floating, context::Context, graph::Graph, identity::Id, ops::Op};
 
 #[derive(Debug, Clone)]
 pub struct Transpose {
@@ -9,29 +9,29 @@ pub struct Transpose {
 }
 
 impl Transpose {
-    pub fn new(inp: Id, out: Id, a1: usize, a2: usize) -> Transpose {
+    pub fn new(inp: Id, out: Id, a1: usize, a2: usize) -> Self {
         Self { inp, out, a1, a2 }
     }
 
-    pub fn boxed(inp: Id, out: Id, a1: usize, a2: usize) -> Box<Transpose> {
+    pub fn boxed(inp: Id, out: Id, a1: usize, a2: usize) -> Box<Self> {
         Box::new(Self::new(inp, out, a1, a2))
     }
 }
 
 impl<D: Floating> Op<D> for Transpose {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "transpose"
     }
 
-    fn eval(&self, ctx: &mut crate::context::Context<D>) {
+    fn eval(&self, ctx: &mut Context<D>) {
         let mut t = ctx.checked_get(&self.inp).clone();
 
         t.swap_axes(self.a1, self.a2);
         ctx.tensors.insert(self.out, t);
     }
 
-    fn vjp(&self, g: &mut crate::graph::Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
-        let og = out_grads[0];
+    fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
+        let og = *out_grads.first()?;
         let out = g.fresh();
         g.push(Self::boxed(og, out, self.a1, self.a2));
         Some(vec![out])
@@ -53,33 +53,34 @@ pub struct TransposeDefault {
 }
 
 impl TransposeDefault {
-    pub fn new(inp: Id, out: Id) -> TransposeDefault {
+    pub fn new(inp: Id, out: Id) -> Self {
         Self { inp, out }
     }
 
-    pub fn boxed(inp: Id, out: Id) -> Box<TransposeDefault> {
+    pub fn boxed(inp: Id, out: Id) -> Box<Self> {
         Box::new(Self::new(inp, out))
     }
 }
 
 impl<D: Floating> Op<D> for TransposeDefault {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "transpose_default"
     }
 
-    fn eval(&self, ctx: &mut crate::context::Context<D>) {
+    fn eval(&self, ctx: &mut Context<D>) {
         let mut t = ctx.checked_get(&self.inp).clone();
         let shape = t.shape();
         let rank = shape.len();
 
         if rank > 1 {
             t.swap_axes(rank - 1, rank - 2);
-        };
+        }
+
         ctx.tensors.insert(self.out, t);
     }
 
-    fn vjp(&self, g: &mut crate::graph::Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
-        let og = out_grads[0];
+    fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
+        let og = *out_grads.first()?;
         let out = g.fresh();
         g.push(Self::boxed(og, out));
         Some(vec![out])
@@ -110,7 +111,7 @@ mod tests {
         let traced = trace_fn::<f32>(f);
 
         let x = arr2(&[[1., 2., 3.], [4., 5., 6.]]).into_dyn();
-        let out = traced.eval()(&x);
+        let (out,) = traced.eval()(&x);
         let expected = x.t().into_owned().into_dyn();
         assert_eq!(out, expected);
     }

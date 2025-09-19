@@ -1,6 +1,6 @@
 use crate::identity::Id;
 
-use std::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 
 pub type TensorData<T = f32> = ndarray::ArrayD<T>;
 pub type Tensor = Tracer;
@@ -11,7 +11,7 @@ pub struct Tracer {
 }
 
 impl Tracer {
-    pub fn new(id: Id) -> Tracer {
+    pub fn new(id: Id) -> Self {
         Self { id }
     }
     pub fn id(&self) -> Id {
@@ -20,43 +20,43 @@ impl Tracer {
 }
 
 impl Tracer {
-    pub fn t(&self) -> Tracer {
+    pub fn t(&self) -> Self {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 
-    pub fn transpose(&self, _a1: usize, _a2: usize) -> Tracer {
+    pub fn transpose(&self, _a1: usize, _a2: usize) -> Self {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 
-    pub fn matmul(&self, _other: &Tracer) -> Tracer {
+    pub fn matmul(&self, _other: &Self) -> Self {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
 
 impl Add for Tracer {
-    type Output = Tracer;
-    fn add(self, _rhs: Tracer) -> Tracer {
+    type Output = Self;
+    fn add(self, _rhs: Self) -> Self {
         panic!("dummy Add operator – only allowed inside #[trace] functions")
     }
 }
 
 impl Sub for Tracer {
-    type Output = Tracer;
-    fn sub(self, _rhs: Tracer) -> Tracer {
+    type Output = Self;
+    fn sub(self, _rhs: Self) -> Self {
         panic!("dummy Sub operator – only allowed inside #[trace] functions")
     }
 }
 
 impl Mul for Tracer {
-    type Output = Tracer;
-    fn mul(self, _rhs: Tracer) -> Tracer {
+    type Output = Self;
+    fn mul(self, _rhs: Self) -> Self {
         panic!("dummy Mul operator – only allowed inside #[trace] functions")
     }
 }
 
 impl Neg for Tracer {
-    type Output = Tracer;
-    fn neg(self) -> Tracer {
+    type Output = Self;
+    fn neg(self) -> Self {
         panic!("dummy Neg operator – only allowed inside #[trace] functions")
     }
 }

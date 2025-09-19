@@ -10,6 +10,9 @@ impl<D: Floating> Const<D> {
     pub fn new(value: D, out: Id) -> Self {
         Self { value, out }
     }
+    pub fn boxed(value: D, out: Id) -> Box<Self> {
+        Box::new(Self::new(value, out))
+    }
 }
 
 impl<D: Floating + 'static> Op<D> for Const<D> {
@@ -27,7 +30,7 @@ impl<D: Floating + 'static> Op<D> for Const<D> {
         vec![].into()
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "const"
     }
 }
