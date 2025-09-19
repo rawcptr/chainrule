@@ -14,11 +14,7 @@ pub struct Broadcast {
 }
 
 impl Broadcast {
-    pub fn new(
-        inp: Id,
-        out: Id,
-        target: impl Into<Vec<usize>>,
-    ) -> Self {
+    pub fn new(inp: Id, out: Id, target: impl Into<Vec<usize>>) -> Self {
         Self {
             inp,
             out,

@@ -59,7 +59,7 @@ where
         let out = self.g.fresh();
         self.emit(Neg::new(a.id(), out), out)
     }
-    
+
     #[must_use]
     pub fn div(&mut self, a: Tracer, b: Tracer) -> Tracer {
         let out = self.g.fresh();

@@ -8,11 +8,7 @@ pub struct Reshape {
 }
 
 impl Reshape {
-    pub fn new(
-        inp: Id,
-        out: Id,
-        target_shape: impl Into<Vec<usize>>,
-    ) -> Self {
+    pub fn new(inp: Id, out: Id, target_shape: impl Into<Vec<usize>>) -> Self {
         Self {
             inp,
             out,

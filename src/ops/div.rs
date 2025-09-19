@@ -40,5 +40,3 @@ primitive_binary_op!(
         vec![grad_lhs, grad_rhs]
     }
 );
-
-
