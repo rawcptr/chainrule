@@ -11,27 +11,6 @@ use ndarray::{
 
 use crate::{Floating, tracing::TensorData};
 
-fn broadcast_shapes(a: &[usize], b: &[usize]) -> Option<Vec<usize>> {
-    let n = a.len().max(b.len());
-    let mut result = Vec::with_capacity(n);
-
-    for i in 0..n {
-        let dim_a = *a.get(a.len().wrapping_sub(i + 1)).unwrap_or(&1);
-        let dim_b = *b.get(b.len().wrapping_sub(i + 1)).unwrap_or(&1);
-
-        if dim_a == dim_b || dim_a == 1 {
-            result.push(dim_b);
-        } else if dim_b == 1 {
-            result.push(dim_a);
-        } else {
-            return None;
-        }
-    }
-
-    result.reverse();
-    Some(result)
-}
-
 fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD<D> {
     let shape_a = a.shape();
     let shape_b = b.shape();
@@ -50,7 +29,7 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
 
     let batch_a = &shape_a[..shape_a.len() - 2];
     let batch_b = &shape_b[..shape_b.len() - 2];
-    let batch_shape = broadcast_shapes(batch_a, batch_b)
+    let batch_shape = super::broadcast_shapes(batch_a, batch_b)
         .expect("batch dimensions should be broadcast-compatible");
 
     let bc_shape_a: Vec<usize> = batch_shape.iter().copied().chain([m, k1]).collect();
@@ -262,8 +241,43 @@ impl<D: Floating + 'static> crate::tracing::session::TraceSession<'_, D> {
 }
 
 impl Tracer {
-    pub fn matmul(&self, _: Tracer, _: Tracer) -> Tracer {
+    pub fn matmul(&self, _: Tracer) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
+    }
+}
+
+pub fn infer_matmul_shape(lhs: &[usize], rhs: &[usize]) -> Vec<usize> {
+    match (lhs.len(), rhs.len()) {
+        // scalar x anything → result shape is other
+        (0, _) => rhs.to_vec(),
+        (_, 0) => lhs.to_vec(),
+
+        // vector dot product (n,) @ (n,) -> scalar
+        (1, 1) => vec![],
+
+        // (n,) @ (n,m) -> (m,)
+        (1, 2) => vec![rhs[1]],
+
+        // (m,n) @ (n,) -> (m,)
+        (2, 1) => vec![lhs[0]],
+
+        // (m,k) @ (k,n) -> (m,n)
+        (2, 2) => vec![lhs[0], rhs[1]],
+
+        // general batched case
+        _ => {
+            let batch_a = &lhs[..lhs.len() - 2];
+            let batch_b = &rhs[..rhs.len() - 2];
+            let batch_shape = super::broadcast_shapes(batch_a, batch_b)
+                .expect("batch dims broadcastable for matmul");
+
+            let m = lhs[lhs.len() - 2];
+            let n = rhs[rhs.len() - 1];
+            let mut result = batch_shape;
+            result.push(m);
+            result.push(n);
+            result
+        }
     }
 }
 

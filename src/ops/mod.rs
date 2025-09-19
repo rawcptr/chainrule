@@ -62,6 +62,27 @@ impl<D> Clone for Box<dyn Op<D>> {
     }
 }
 
+pub(crate) fn broadcast_shapes(a: &[usize], b: &[usize]) -> Option<Vec<usize>> {
+    let n = a.len().max(b.len());
+    let mut result = Vec::with_capacity(n);
+
+    for i in 0..n {
+        let dim_a = *a.get(a.len().wrapping_sub(i + 1)).unwrap_or(&1);
+        let dim_b = *b.get(b.len().wrapping_sub(i + 1)).unwrap_or(&1);
+
+        if dim_a == dim_b || dim_a == 1 {
+            result.push(dim_b);
+        } else if dim_b == 1 {
+            result.push(dim_a);
+        } else {
+            return None;
+        }
+    }
+
+    result.reverse();
+    Some(result)
+}
+
 pub mod macros {
     #[macro_export]
     /// binary operation implementer
