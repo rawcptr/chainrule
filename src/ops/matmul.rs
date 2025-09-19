@@ -1,10 +1,15 @@
-use crate::{Graph, identity::Id, ops::transpose::TransposeDefault};
+use crate::{
+    Graph, Tracer,
+    context::Context,
+    identity::Id,
+    ops::{Op, transpose::TransposeDefault},
+};
 use ndarray::{
     Array, ArrayD, ArrayView1, Ix1, Ix2, IxDyn,
     linalg::{general_mat_mul, general_mat_vec_mul},
 };
 
-use crate::{Floating, binary_op, tracing::TensorData};
+use crate::{Floating, tracing::TensorData};
 
 fn broadcast_shapes(a: &[usize], b: &[usize]) -> Option<Vec<usize>> {
     let n = a.len().max(b.len());
@@ -181,40 +186,86 @@ pub fn matmul<D: Floating + 'static>(a: &TensorData<D>, b: &TensorData<D>) -> Te
     }
 }
 
-binary_op!(
-    MatMul,
-    disp: "matmul",
-    fwd: |ref x: TensorData<D>, ref y: TensorData<D>| matmul(x, y),
-    vjp: |this: &MatMul, g: &mut Graph<D>, og: Id| {
-        // "this.lhs" and "this.rhs" are the inputs to forward op (x, y)
+#[derive(Debug, Clone)]
+pub struct MatMul {
+    pub lhs: Id,
+    pub rhs: Id,
+    pub out: Id,
+}
 
-        // Grad w.r.t lhs: d_out @ transpose(rhs)
+impl MatMul {
+    pub fn new(lhs: Id, rhs: Id, out: Id) -> Self {
+        Self { lhs, rhs, out }
+    }
+}
+
+impl<D: Floating + 'static> Op<D> for MatMul {
+    fn name(&self) -> &str {
+        "matmul"
+    }
+
+    fn inputs(&self) -> Vec<Id> {
+        vec![self.lhs, self.rhs]
+    }
+
+    fn outputs(&self) -> Vec<Id> {
+        vec![self.out]
+    }
+
+    fn eval(&self, ctx: &mut Context<D>) {
+        let lhs = ctx.checked_get(&self.lhs).clone();
+        let rhs = ctx.checked_get(&self.rhs).clone();
+        ctx.tensors.insert(self.out, matmul(&lhs, &rhs));
+    }
+
+    fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
+        let og = *out_grads.first()?;
+
         let rhs_t = {
             let out = g.fresh();
-            g.push(TransposeDefault::boxed(this.rhs, out));
-            out
-        };
-        let grad_lhs = {
-            let out = g.fresh();
-            g.push(Box::new(MatMul::new(og, rhs_t, out)));
+            let transpose = TransposeDefault::new(self.rhs, out);
+            g.push(Box::new(transpose));
             out
         };
 
-        // Grad w.r.t rhs: transpose(lhs) @ d_out
-        let lhs_t = {
+        let grad_lhs = {
             let out = g.fresh();
-            g.push(TransposeDefault::boxed(this.lhs, out));
+            let matmul = MatMul::new(og, rhs_t, out);
+            g.push(Box::new(matmul));
             out
         };
+
+        let lhs_t = {
+            let out = g.fresh();
+            let transpose = TransposeDefault::new(self.lhs, out);
+            g.push(Box::new(transpose));
+            out
+        };
+
         let grad_rhs = {
             let out = g.fresh();
-            g.push(Box::new(MatMul::new(lhs_t, og, out)));
+            let matmul = MatMul::new(lhs_t, og, out);
+            g.push(Box::new(matmul));
             out
         };
 
         vec![grad_lhs, grad_rhs]
     }
-);
+}
+
+impl<D: Floating + 'static> crate::tracing::session::TraceSession<'_, D> {
+    #[must_use]
+    pub fn matmul(&mut self, a: Tracer, b: Tracer) -> Tracer {
+        let out = self.g.fresh();
+        self.emit(MatMul::new(a.id(), b.id(), out), out)
+    }
+}
+
+impl Tracer {
+    pub fn matmul(&self, _: Tracer, _: Tracer) -> Tracer {
+        panic!("dummy operation - only allowed inside #[trace] function")
+    }
+}
 
 #[cfg(test)]
 mod tests {
