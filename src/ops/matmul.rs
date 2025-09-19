@@ -48,8 +48,8 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
     let batch_shape = broadcast_shapes(batch_a, batch_b)
         .expect("batch dimensions should be broadcast-compatible");
 
-    let bc_shape_a: Vec<usize> = batch_shape.iter().cloned().chain([m, k1]).collect();
-    let bc_shape_b: Vec<usize> = batch_shape.iter().cloned().chain([k2, n]).collect();
+    let bc_shape_a: Vec<usize> = batch_shape.iter().copied().chain([m, k1]).collect();
+    let bc_shape_b: Vec<usize> = batch_shape.iter().copied().chain([k2, n]).collect();
 
     let a_bc = a
         .broadcast(IxDyn(&bc_shape_a))
@@ -58,7 +58,7 @@ fn batched_matmul<D: Floating + 'static>(a: &ArrayD<D>, b: &ArrayD<D>) -> ArrayD
         .broadcast(IxDyn(&bc_shape_b))
         .expect("broadcasting to a derived valid shape should be infallible ");
 
-    let result_shape: Vec<usize> = batch_shape.iter().cloned().chain([m, n]).collect();
+    let result_shape: Vec<usize> = batch_shape.iter().copied().chain([m, n]).collect();
     let mut result = ArrayD::zeros(IxDyn(&result_shape));
 
     let batch_elems: usize = batch_shape.iter().product();
