@@ -249,7 +249,7 @@ impl<D: Floating + 'static> Op<D> for MatMul {
             out
         };
 
-        vec![grad_lhs, grad_rhs]
+        Some(vec![grad_lhs, grad_rhs])
     }
 }
 
