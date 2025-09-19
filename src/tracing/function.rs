@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
 use crate::{
-    Floating, context::Context, graph::Graph, identity::Id, ops::Const, tracing::TensorData,
+    Floating,
+    context::Context,
+    graph::Graph,
+    identity::Id,
+    ops::{Add, Const},
+    tracing::TensorData,
 };
 
 #[derive(Debug, Clone)]
@@ -45,7 +50,82 @@ impl<D: Floating + 'static> TraceableFn<D> {
     }
 
     pub fn grad(&self) -> Self {
-        todo!("gradients are not implemented yet.")
+        // start a fresh graph and clone the forward graph into it
+        // bump the Id generator to avoid collisions with existing Ids
+        // reverse-mode over the original nodes, and append VJP ops
+
+        let mut g = Graph::<D>::new();
+        for op in &self.graph.nodes {
+            g.push(op.clone());
+        }
+
+        let mut max_id = 0usize;
+        for op in &self.graph.nodes {
+            for id in op.inputs().into_iter().chain(op.outputs().into_iter()) {
+                max_id = max_id.max(id.as_usize());
+            }
+        }
+
+        for id in self.inputs.iter().chain(&self.outputs) {
+            max_id = max_id.max(id.as_usize())
+        }
+
+        for _ in 0..max_id {
+            let _ = g.fresh();
+        }
+
+        let mut gradients: HashMap<Id, Id> = HashMap::new();
+        let seed = g.fresh();
+        g.push(Const::boxed(D::one(), seed));
+        gradients.insert(
+            *self
+                .outputs
+                .first()
+                .expect("no gradient flowing in for node"),
+            seed,
+        );
+
+        for node in self.graph.nodes.iter().rev() {
+            let out_ids = node.outputs();
+            let out_grads: Vec<_> = out_ids
+                .iter()
+                .filter_map(|out| gradients.get(out).copied())
+                .collect();
+
+            if out_grads.is_empty() {
+                continue;
+            }
+
+            if let Some(inp_grad) = node.vjp(&mut g, &out_grads) {
+                for (inp, grad_contrib) in node.inputs().into_iter().zip(inp_grad) {
+                    if let Some(existing) = gradients.get(&inp).copied() {
+                        let out = g.fresh();
+                        g.push(Box::new(Add::new(existing, grad_contrib, out)));
+                        gradients.insert(inp, out);
+                    } else {
+                        gradients.insert(inp, grad_contrib);
+                    }
+                }
+            }
+        }
+
+        let grads_out: Vec<_> = self
+            .inputs
+            .iter()
+            .map(|i| {
+                gradients.get(i).copied().unwrap_or_else(|| {
+                    let z = g.fresh();
+                    g.push(Box::new(Const::new(D::zero(), z)));
+                    z
+                })
+            })
+            .collect();
+
+        Self {
+            graph: g,
+            inputs: self.inputs.clone(),
+            outputs: grads_out,
+        }
     }
 }
 
