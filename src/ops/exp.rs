@@ -16,7 +16,7 @@ simple_unary_op!(
 );
 
 impl Tracer {
-    pub fn exp(&self) {
+    pub fn exp(&self) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }

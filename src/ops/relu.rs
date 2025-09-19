@@ -52,7 +52,7 @@ impl<D: Floating + 'static> Op<D> for ReLUGradMask {
 }
 
 impl Tracer {
-    pub fn relu(&self) {
+    pub fn relu(&self) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
