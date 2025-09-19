@@ -106,6 +106,12 @@ impl Fold for TraceRewriter {
                         let #tmp_out = #sess.mul(#tmp_l, #tmp_r);
                         #tmp_out
                     }},
+                    BinOp::Div(_) => syn::parse_quote! {{
+                        let #tmp_l = #lhs;
+                        let #tmp_r = #rhs;
+                        let #tmp_out = #sess.div(#tmp_l, #tmp_r);
+                        #tmp_out
+                    }},
                     _ => syn::parse_quote! {
                         compile_error!("unsupported operator in #[trace] fn")
                     },
@@ -126,11 +132,12 @@ impl Fold for TraceRewriter {
 
             Expr::Lit(lit) => {
                 let sess = &self.sess_ident;
-                match lit.lit {
-                    syn::Lit::Float(lit_float) => syn::parse_quote! {{
+                if let syn::Lit::Float(lit_float) = lit.lit {
+                    syn::parse_quote! {{
                         #sess.constant(D::from_f64(#lit_float))
-                    }},
-                    _ => Expr::Lit(lit),
+                    }}
+                } else {
+                    Expr::Lit(lit)
                 }
             }
             Expr::MethodCall(mc) => {
