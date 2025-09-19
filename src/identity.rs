@@ -9,6 +9,12 @@ pub trait IdGenerator {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Id(usize);
 
+impl Id {
+    pub fn as_usize(&self) -> usize {
+        self.0
+    }
+}
+
 pub mod generators {
     use std::collections::VecDeque;
 
