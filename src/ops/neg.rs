@@ -7,7 +7,7 @@ pub struct Neg {
 }
 
 impl Neg {
-    pub fn new(inp: Id, out: Id) -> Neg {
+    pub fn new(inp: Id, out: Id) -> Self {
         Self { inp, out }
     }
     pub fn boxed(inp: Id, out: Id) -> Box<Self> {
