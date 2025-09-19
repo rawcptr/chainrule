@@ -6,13 +6,15 @@ pub mod exp;
 pub mod input;
 pub mod log;
 pub mod matmul;
+pub mod max;
+pub mod mean;
 pub mod mul;
 pub mod neg;
+pub mod relu;
 pub mod reshape;
 pub mod sub;
 pub mod sum;
 pub mod transpose;
-pub mod relu;
 
 use core::fmt::Debug;
 
