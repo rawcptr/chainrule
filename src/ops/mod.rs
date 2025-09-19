@@ -1,7 +1,10 @@
 pub mod add;
 pub mod broadcast;
 pub mod constant;
+pub mod div;
+pub mod exp;
 pub mod input;
+pub mod log;
 pub mod matmul;
 pub mod mul;
 pub mod neg;
@@ -9,6 +12,7 @@ pub mod reshape;
 pub mod sub;
 pub mod sum;
 pub mod transpose;
+pub mod relu;
 
 use core::fmt::Debug;
 
@@ -134,6 +138,48 @@ pub mod macros {
                 }
 
                 fn outputs(&self) -> Vec<$crate::identity::Id> {
+                    vec![self.out]
+                }
+            }
+        };
+    }
+    #[macro_export]
+    macro_rules! simple_unary_op {
+        ($name:ident, disp:$strname:expr,
+     fwd:$forward:expr,
+     vjp:$vjp_rule:expr
+    ) => {
+            #[derive(Debug, Clone)]
+            pub struct $name {
+                pub inp: Id,
+                pub out: Id,
+            }
+            impl $name {
+                pub fn new(inp: Id, out: Id) -> Self {
+                    Self { inp, out }
+                }
+            }
+            impl<D: $crate::Floating + 'static> $crate::ops::Op<D> for $name {
+                fn name(&self) -> &str {
+                    $strname
+                }
+                fn eval(&self, ctx: &mut $crate::context::Context<D>) {
+                    let x = ctx.checked_get(&self.inp).clone();
+                    ctx.tensors.insert(self.out, ($forward)(x));
+                }
+                fn vjp(
+                    &self,
+                    g: &mut $crate::graph::Graph<D>,
+                    out_grads: &[Id],
+                ) -> Option<Vec<Id>> {
+                    let og = *out_grads.first()?;
+                    let grad = ($vjp_rule)(self, g, og);
+                    Some(vec![grad])
+                }
+                fn inputs(&self) -> Vec<Id> {
+                    vec![self.inp]
+                }
+                fn outputs(&self) -> Vec<Id> {
                     vec![self.out]
                 }
             }
