@@ -43,6 +43,20 @@ impl<D: Floating + 'static> Op<D> for Mean {
         let x = ctx.checked_get(&self.inp);
         let mut t = x.clone();
         // sum along axes
+        if self.axis.is_empty() {
+            // sum to scalar.
+            let n = D::from_f64(x.len() as f64);
+            if n == D::zero() {
+                // div by zero -> 0
+                ctx.insert(self.out, ndarray::arr0(D::zero()).into_dyn());
+                return;
+            }
+            let sum = x.sum();
+            let result = ndarray::arr0(sum / n).into_dyn();
+            ctx.insert(self.out, result);
+            return;
+        }
+
         for ax in &self.axis {
             let a = Axis(*ax);
             t = if self.keep_dims {
