@@ -26,6 +26,7 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_output = &input_fn.sig.output;
 
     let old_name = format_ident!("{}_old", fn_name);
+    let inline_name = format_ident!("{}_inline", fn_name);
     // all inputs must be of Tensor/Tracer type.
     let arg_idents: Vec<Box<syn::Pat>> = fn_inputs
         .iter()
@@ -59,6 +60,18 @@ pub fn trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
             let result = { #new_body };
             (vec![#(#arg_idents.id()),*], result)
         }
+
+        // inline variant for use inside other #[trace] functions:
+        // reuses the same session and accepts Tracer args directly.
+        #[allow(unused_parens)]
+        #fn_vis fn #inline_name<'a, D: #chainrule::Floating + 'static>(
+            sess: &mut #chainrule::TraceSession<'a, D>,
+            #( #arg_idents: #chainrule::tracing::Tracer ),*
+        ) -> #chainrule::tracing::Tracer {
+            #( let _ = &#arg_idents; )*
+            let result = { #new_body };
+            result
+         }
     };
     TokenStream::from(expanded)
 }
@@ -140,6 +153,29 @@ impl Fold for TraceRewriter {
                     Expr::Lit(lit)
                 }
             }
+
+            Expr::Call(call) => {
+                if let Expr::Path(mut p) = *call.func {
+                    if let Some(last) = p.path.segments.last_mut() {
+                        let new_ident = format_ident!("{}_inline", last.ident);
+                        last.ident = new_ident;
+                    }
+                    let args: Vec<_> = call.args.into_iter().map(|a| self.fold_expr(a)).collect();
+                    let arg_tmps: Vec<syn::Ident> =
+                        (0..args.len()).map(|_| self.fresh("arg")).collect();
+                    let out_tmp = self.fresh("tmp_call");
+                    let sess = &self.sess_ident;
+                    syn::parse_quote! {{
+                        #( let #arg_tmps = #args; )*
+                        // re-borrow to avoid moving the &mut reference
+                        let #out_tmp = #p(&mut *#sess, #( #arg_tmps ),* );
+                        #out_tmp
+                    }}
+                } else {
+                    fold::fold_expr(self, Expr::Call(call))
+                }
+            }
+
             Expr::MethodCall(mc) => {
                 let receiver = self.fold_expr(*mc.receiver);
                 let args: Vec<_> = mc.args.into_iter().map(|a| self.fold_expr(a)).collect();
