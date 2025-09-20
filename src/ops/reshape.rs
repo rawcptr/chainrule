@@ -49,14 +49,14 @@ impl<D: Floating> Op<D> for Reshape {
 
 impl<D: Floating + 'static> TraceSession<'_, D> {
     #[must_use]
-    pub fn reshape(&mut self, t: Tracer, shape: Vec<usize>) -> Tracer {
+    pub fn reshape(&mut self, t: Tracer, shape: impl Into<Vec<usize>>) -> Tracer {
         let out = self.g.fresh();
         self.emit(Reshape::new(t.id(), out, shape), out)
     }
 }
 
 impl Tracer {
-    pub fn reshape(&self, _: Vec<usize>) -> Tracer {
+    pub fn reshape(&self, _: impl Into<Vec<usize>>) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }

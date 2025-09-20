@@ -129,13 +129,13 @@ impl<D: Floating + 'static> Op<D> for Mean {
 }
 
 impl Tracer {
-    pub fn mean(&self, _axis: Vec<usize>, _keep_dims: bool) -> Tracer {
+    pub fn mean(&self, _axis: impl Into<Vec<usize>>, _keep_dims: bool) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
 
 impl<D: Floating + 'static> TraceSession<'_, D> {
-    pub fn mean(&mut self, a: Tracer, axis: Vec<usize>, keep_dims: bool) -> Tracer {
+    pub fn mean(&mut self, a: Tracer, axis: impl Into<Vec<usize>>, keep_dims: bool) -> Tracer {
         let out = self.g.fresh();
         self.emit(Mean::new(a.id(), out, axis, keep_dims), out)
     }

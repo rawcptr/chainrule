@@ -56,7 +56,7 @@ impl<D: Floating> Op<D> for Broadcast {
 
 impl<D: Floating + 'static> TraceSession<'_, D> {
     #[must_use]
-    pub fn broadcast(&mut self, t: Tracer, shape: Vec<usize>) -> Tracer {
+    pub fn broadcast(&mut self, t: Tracer, shape: impl Into<Vec<usize>>) -> Tracer {
         let out = self.g.fresh();
         // self.emit(Broadcast::new(t.id(), out, shape, t.shape()), out)
         self.emit(Broadcast::new(t.id(), out, shape), out)
@@ -64,7 +64,7 @@ impl<D: Floating + 'static> TraceSession<'_, D> {
 }
 
 impl Tracer {
-    pub fn broadcast(&self, _: Tracer, _: Vec<usize>) -> Tracer {
+    pub fn broadcast(&self, _: Tracer, _: impl Into<Vec<usize>>) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }

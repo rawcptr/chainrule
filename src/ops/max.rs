@@ -170,13 +170,13 @@ impl<D: Floating + 'static> Op<D> for MaxGradMask {
 }
 
 impl Tracer {
-    pub fn max(&self, _axis: Vec<usize>, _keep_dims: bool) -> Tracer {
+    pub fn max(&self, _axis: impl Into<Vec<usize>>, _keep_dims: bool) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
 
 impl<D: Floating + 'static> TraceSession<'_, D> {
-    pub fn max(&mut self, a: Tracer, axis: Vec<usize>, keep_dims: bool) -> Tracer {
+    pub fn max(&mut self, a: Tracer, axis: impl Into<Vec<usize>>, keep_dims: bool) -> Tracer {
         let out = self.g.fresh();
         self.emit(Max::new(a.id(), out, axis, keep_dims), out)
     }

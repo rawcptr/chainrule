@@ -88,13 +88,13 @@ impl<D: Floating> Op<D> for Sum {
 }
 
 impl Tracer {
-    pub fn sum(&self, _axis: Vec<usize>, _keep_dims: bool) -> Tracer {
+    pub fn sum(&self, _axis: impl Into<Vec<usize>>, _keep_dims: bool) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
 
 impl<D: Floating + 'static> TraceSession<'_, D> {
-    pub fn sum(&mut self, a: Tracer, axis: Vec<usize>, keep_dims: bool) -> Tracer {
+    pub fn sum(&mut self, a: Tracer, axis: impl Into<Vec<usize>>, keep_dims: bool) -> Tracer {
         let out = self.g.fresh();
         self.emit(Sum::new(a.id(), out, axis, keep_dims), out)
     }
@@ -210,11 +210,11 @@ pub struct ReshapeForBroadcast {
 }
 
 impl ReshapeForBroadcast {
-    pub fn new(inp_grad: Id, out: Id, axis: Vec<usize>, keep_dims: bool) -> Self {
+    pub fn new(inp_grad: Id, out: Id, axis: impl Into<Vec<usize>>, keep_dims: bool) -> Self {
         Self {
             inp_grad,
             out,
-            axis,
+            axis: axis.into(),
             keep_dims,
         }
     }
