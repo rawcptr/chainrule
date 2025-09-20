@@ -1,4 +1,6 @@
-use crate::identity::Id;
+use ndarray::Dim;
+
+use crate::{Floating, identity::Id};
 
 use core::ops::{Add, Mul, Neg, Sub};
 use std::ops::Div;
@@ -57,5 +59,24 @@ impl Div for Tracer {
 
     fn div(self, _: Self) -> Self::Output {
         panic!("dummy Div operator - only allowed inside #[trace] functions")
+    }
+}
+
+pub trait Item<D: Floating> {
+    fn item(&self) -> D;
+}
+
+impl<D: Floating> Item<D> for TensorData<D> {
+    fn item(&self) -> D {
+        if !self.shape().is_empty() {
+            panic!(
+                "item only works on tensors of 0 dimensions. shape: {:?}",
+                self.shape()
+            );
+        }
+        self.clone()
+            .into_dimensionality::<Dim<[usize; 0]>>()
+            .unwrap()
+            .into_scalar()
     }
 }

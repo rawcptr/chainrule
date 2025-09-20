@@ -119,6 +119,7 @@ where
 /// use chainrule::prelude::*;
 /// ```
 pub mod prelude {
+    pub use crate::tracing::tracer::Item as _;
     pub use crate::{Tensor, trace, trace_fn};
 }
 
