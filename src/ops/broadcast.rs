@@ -35,7 +35,7 @@ impl<D: Floating> Op<D> for Broadcast {
             .expect("failed to broadcast. dimension mismatch")
             .to_owned();
 
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t.to_owned());
     }
 
     fn vjp(&self, g: &mut crate::Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -95,9 +95,8 @@ impl<D: Floating> Op<D> for BroadcastLike {
         let shape = like.shape().to_vec();
         let y = x
             .broadcast(shape)
-            .expect("broadcast_like: incompatible shapes")
-            .to_owned();
-        ctx.tensors.insert(self.out, y);
+            .expect("broadcast_like: incompatible shapes");
+        ctx.insert(self.out, y.to_owned());
     }
 
     fn vjp(&self, g: &mut crate::Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

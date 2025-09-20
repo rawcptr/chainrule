@@ -26,7 +26,7 @@ impl<D: Floating + 'static> TraceableFn<D> {
         let mut ctx = Context::<D>::new();
 
         for (id, val) in self.inputs.iter().zip(packed.into_iter()) {
-            ctx.tensors.insert(*id, val);
+            ctx.insert(*id, val);
         }
 
         for op in &self.graph.nodes {

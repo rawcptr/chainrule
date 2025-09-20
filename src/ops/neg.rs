@@ -22,7 +22,7 @@ impl<D: Floating> Op<D> for Neg {
 
     fn eval(&self, ctx: &mut Context<D>) {
         let t = ctx.checked_get(&self.inp).clone();
-        ctx.tensors.insert(self.out, -t);
+        ctx.insert(self.out, -t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

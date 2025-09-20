@@ -192,9 +192,9 @@ impl<D: Floating + 'static> Op<D> for MatMul {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let lhs = ctx.checked_get(&self.lhs).clone();
-        let rhs = ctx.checked_get(&self.rhs).clone();
-        ctx.tensors.insert(self.out, matmul(&lhs, &rhs));
+        let lhs = ctx.checked_get(&self.lhs);
+        let rhs = ctx.checked_get(&self.rhs);
+        ctx.insert(self.out, matmul(lhs, rhs));
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

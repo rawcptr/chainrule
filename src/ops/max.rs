@@ -42,13 +42,14 @@ impl<D: Floating + 'static> Op<D> for Max {
                 D::neg_infinity(),
                 |&acc, &x| if acc > x { acc } else { x },
             );
+
             t = if self.keep_dims {
                 reduced.insert_axis(a)
             } else {
                 reduced
             };
         }
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -151,7 +152,7 @@ impl<D: Floating + 'static> Op<D> for MaxGradMask {
             .and(y.view())
             .map_collect(|&a, &b| if a == b { D::one() } else { D::zero() });
 
-        ctx.tensors.insert(self.out, mask);
+        ctx.insert(self.out, mask);
     }
 
     fn vjp(&self, _g: &mut Graph<D>, _out_grads: &[Id]) -> Option<Vec<Id>> {

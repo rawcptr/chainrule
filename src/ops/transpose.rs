@@ -34,7 +34,7 @@ impl<D: Floating + 'static> Op<D> for TransposeDefault {
         if rank > 1 {
             t.swap_axes(rank - 1, rank - 2);
         }
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -76,7 +76,7 @@ impl<D: Floating + 'static> Op<D> for Transpose {
     fn eval(&self, ctx: &mut Context<D>) {
         let mut t = ctx.checked_get(&self.inp).clone();
         t.swap_axes(self.a1, self.a2);
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

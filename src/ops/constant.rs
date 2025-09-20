@@ -24,7 +24,7 @@ impl<D: Floating + 'static> Op<D> for Const<D> {
     }
     fn eval(&self, ctx: &mut Context<D>) {
         use ndarray::arr0;
-        ctx.tensors.insert(self.out, arr0(self.value).into_dyn());
+        ctx.insert(self.out, arr0(self.value).into_dyn());
     }
     fn vjp(&self, _g: &mut Graph<D>, _out_grads: &[Id]) -> Option<Vec<Id>> {
         vec![].into()

@@ -26,9 +26,8 @@ impl<D: Floating> Op<D> for Reshape {
         let t = ctx.checked_get(&self.inp);
         let reshaped = t
             .to_shape(&*self.target_shape)
-            .expect("reshape should succeed as the number of elements is preserved")
-            .to_owned();
-        ctx.tensors.insert(self.out, reshaped);
+            .expect("reshape should succeed as the number of elements is preserved");
+        ctx.insert(self.out, reshaped.to_owned());
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -89,7 +88,7 @@ impl<D: Floating> Op<D> for ReshapeLike {
             .to_shape(target)
             .expect("reshape_like: element count mismatch")
             .to_owned();
-        ctx.tensors.insert(self.out, y);
+        ctx.insert(self.out, y);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

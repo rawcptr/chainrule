@@ -60,7 +60,7 @@ impl<D: Floating + 'static> Op<D> for Mean {
         }
         // If no axes provided, denom=1 and t==x; that's fine.
         let t = t.mapv(|v| v / denom);
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {

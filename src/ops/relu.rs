@@ -37,7 +37,7 @@ impl<D: Floating + 'static> Op<D> for ReLUGradMask {
     fn eval(&self, ctx: &mut Context<D>) {
         let x = ctx.checked_get(&self.inp).clone();
         let mask = x.mapv(|a| if a > D::zero() { D::one() } else { D::zero() });
-        ctx.tensors.insert(self.out, mask);
+        ctx.insert(self.out, mask);
     }
     fn vjp(&self, _g: &mut Graph<D>, _og: &[Id]) -> Option<Vec<Id>> {
         // d(1[x>0])/dx is 0 almost everywhere, so no backward pass

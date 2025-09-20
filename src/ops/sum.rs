@@ -53,7 +53,7 @@ impl<D: Floating> Op<D> for Sum {
             t
         };
 
-        ctx.tensors.insert(self.out, result);
+        ctx.insert(self.out, result);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -128,7 +128,7 @@ impl<D: Floating> Op<D> for ReduceToLike {
         let b_shape = like.shape();
 
         if a_shape == b_shape {
-            ctx.tensors.insert(self.out, t);
+            ctx.insert(self.out, t);
             return;
         }
 
@@ -182,7 +182,7 @@ impl<D: Floating> Op<D> for ReduceToLike {
             t.shape()
         );
 
-        ctx.tensors.insert(self.out, t);
+        ctx.insert(self.out, t);
     }
 
     fn vjp(&self, g: &mut Graph<D>, out_grads: &[Id]) -> Option<Vec<Id>> {
@@ -240,7 +240,7 @@ impl<D: Floating> Op<D> for ReshapeForBroadcast {
         // If keep_dims was true, or if it was a full reduction to a scalar,
         // the shape is already correct for broadcasting. No op needed.
         if self.keep_dims || self.axis.is_empty() {
-            ctx.tensors.insert(self.out, inp_grad_tensor);
+            ctx.insert(self.out, inp_grad_tensor);
             return;
         }
 
@@ -257,6 +257,6 @@ impl<D: Floating> Op<D> for ReshapeForBroadcast {
             .unwrap()
             .to_owned()
             .into_dyn();
-        ctx.tensors.insert(self.out, reshaped_tensor);
+        ctx.insert(self.out, reshaped_tensor);
     }
 }

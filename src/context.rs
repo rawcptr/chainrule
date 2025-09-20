@@ -19,6 +19,10 @@ impl<D: Floating> Context<D> {
             .get(id)
             .unwrap_or_else(|| panic!("tensor({id:?}) was not found in context."))
     }
+
+    pub fn insert(&mut self, id: Id, tensor: TensorData<D>) {
+        self.tensors.insert(id, tensor);
+    }
 }
 
 impl Default for Context {
