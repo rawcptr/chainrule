@@ -64,7 +64,7 @@ impl<D: Floating + 'static> TraceSession<'_, D> {
 }
 
 impl Tracer {
-    pub fn broadcast(&self, _: Tracer, _: impl Into<Vec<usize>>) -> Tracer {
+    pub fn broadcast(&self, _: impl Into<Vec<usize>>) -> Tracer {
         panic!("dummy operation - only allowed inside #[trace] function")
     }
 }
