@@ -5,7 +5,7 @@ use crate::{
 simple_unary_op!(
     Exp,
     disp: "exp",
-    fwd: |x: TensorData<D>| x.mapv(|a| a.exp()),
+    fwd: |x: &TensorData<D>| x.mapv(|a| a.exp()),
     vjp: |this: &Exp, g: &mut Graph<D>, og: Id| {
         let out = g.fresh();
         g.push(Box::new(Exp::new(this.inp, out)));

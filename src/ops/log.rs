@@ -8,7 +8,7 @@ use crate::{
 simple_unary_op!(
     Log,
     disp: "log",
-    fwd: |x: TensorData<D>| x.mapv(|a| a.ln()),
+    fwd: |x: &TensorData<D>| x.mapv(|a| a.ln()),
     vjp: |this: &Log, g: &mut Graph<D>, og: Id| {
         // 1/x
         let ret = g.fresh();

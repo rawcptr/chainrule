@@ -9,7 +9,7 @@ use crate::{
 primitive_binary_op!(
     Sub,
     disp:  "sub",
-    fwd: |x: TensorData<D>, y: TensorData<D>| x - y,
+    fwd: |x: &TensorData<D>, y: &TensorData<D>| x - y,
     vjp: |this: &Sub, g: &mut Graph<D>, og: Id| {
         let grad_x = {
             let out = g.fresh();

@@ -9,7 +9,7 @@ use crate::{
 simple_unary_op!(
     ReLU,
     disp: "relu",
-    fwd: |x: TensorData<D>| x.mapv(|a| if a > D::zero() { a } else { D::zero() }),
+    fwd: |x: &TensorData<D>| x.mapv(|a| if a > D::zero() { a } else { D::zero() }),
     vjp: |this: &ReLU, g: &mut Graph<D>, og: Id| {
         // grad = og * 1[x>0]
         let mask_out = g.fresh();
@@ -35,7 +35,7 @@ impl<D: Floating + 'static> Op<D> for ReLUGradMask {
         "relu_mask"
     }
     fn eval(&self, ctx: &mut Context<D>) {
-        let x = ctx.checked_get(&self.inp).clone();
+        let x = ctx.checked_get(&self.inp);
         let mask = x.mapv(|a| if a > D::zero() { D::one() } else { D::zero() });
         ctx.insert(self.out, mask);
     }

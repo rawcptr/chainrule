@@ -29,11 +29,10 @@ impl<D: Floating> Op<D> for Broadcast {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let t = ctx.checked_get(&self.inp).clone();
+        let t = ctx.checked_get(&self.inp);
         let t = t
             .broadcast(self.target_shape.clone())
-            .expect("failed to broadcast. dimension mismatch")
-            .to_owned();
+            .expect("failed to broadcast. dimension mismatch");
 
         ctx.insert(self.out, t.to_owned());
     }
@@ -90,7 +89,7 @@ impl<D: Floating> Op<D> for BroadcastLike {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let x = ctx.checked_get(&self.inp).clone();
+        let x = ctx.checked_get(&self.inp);
         let like = ctx.checked_get(&self.like);
         let shape = like.shape().to_vec();
         let y = x

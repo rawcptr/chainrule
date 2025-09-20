@@ -8,7 +8,7 @@ use crate::{
 primitive_binary_op!(
     Div,
     disp: "div",
-    fwd: |x: TensorData<D>, y: TensorData<D>| x / y,
+    fwd: |x: &TensorData<D>, y: &TensorData<D>| x / y,
     vjp: |this: &Div, g: &mut Graph<D>, og: Id| {
         // d/dx (x/y) = 1/y
         let one_id = {

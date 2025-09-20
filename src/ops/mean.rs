@@ -40,7 +40,7 @@ impl<D: Floating + 'static> Op<D> for Mean {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let x = ctx.checked_get(&self.inp).clone();
+        let x = ctx.checked_get(&self.inp);
         let mut t = x.clone();
         // sum along axes
         for ax in &self.axis {

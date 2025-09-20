@@ -130,9 +130,9 @@ pub mod macros {
                 }
 
                 fn eval(&self, ctx: &mut $crate::context::Context<D>) {
-                    let x = ctx.checked_get(&self.lhs).clone();
-                    let y = ctx.checked_get(&self.rhs).clone();
-                    ctx.tensors.insert(self.out, ($forward)(x, y));
+                    let x = ctx.checked_get(&self.lhs);
+                    let y = ctx.checked_get(&self.rhs);
+                    ctx.insert(self.out, ($forward)(x, y));
                 }
 
                 fn inputs(&self) -> Vec<$crate::identity::Id> {
@@ -166,8 +166,8 @@ pub mod macros {
                     $strname
                 }
                 fn eval(&self, ctx: &mut $crate::context::Context<D>) {
-                    let x = ctx.checked_get(&self.inp).clone();
-                    ctx.tensors.insert(self.out, ($forward)(x));
+                    let x = ctx.checked_get(&self.inp);
+                    ctx.insert(self.out, ($forward)(x));
                 }
                 fn vjp(
                     &self,

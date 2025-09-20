@@ -40,7 +40,7 @@ impl<D: Floating + 'static> Op<D> for Max {
             let reduced = t.fold_axis(
                 a,
                 D::neg_infinity(),
-                |&acc, &x| if acc > x { acc } else { x },
+                |acc, x| if acc > x { *acc } else { *x },
             );
 
             t = if self.keep_dims {
@@ -140,8 +140,8 @@ impl<D: Floating + 'static> Op<D> for MaxGradMask {
     }
 
     fn eval(&self, ctx: &mut Context<D>) {
-        let x = ctx.checked_get(&self.x).clone();
-        let y = ctx.checked_get(&self.y).clone();
+        let x = ctx.checked_get(&self.x);
+        let y = ctx.checked_get(&self.y);
         assert_eq!(
             x.shape(),
             y.shape(),
