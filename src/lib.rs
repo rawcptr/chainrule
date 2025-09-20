@@ -6,7 +6,7 @@
 //! ## API
 //!
 //! ```rust,ignore
-//! use chainrule::prelude;:*;
+//! use chainrule::prelude::*;
 //! use ndarray::array;
 //!
 //! #[trace]
@@ -16,10 +16,10 @@
 //!
 //! let f = trace_fn::<f32>(multiply);
 //!
-//! let a = array![1., 2., 3.].into_dyn();
-//! let b = array![4., 5., 6.].into_dyn();
+//! let a = array![1., 2., 3.];
+//! let b = array![4., 5., 6.];
 //!
-//! let out = f.eval()((&a, &b));
+//! let out = f.eval()((a, b));
 //! assert_eq!(out, &a * &b + 1.0);
 //! ```
 //!
@@ -27,7 +27,6 @@
 //!
 //! ```rust,ignore
 //! use chainrule::prelude::*;
-//! use chainrule::trace;
 //! use ndarray::arr2;
 //!
 //! #[trace]
@@ -41,7 +40,7 @@
 //! let x = arr2(&[[1., 1.], [2., 2.]]);
 //! let b = arr2(&[[1., 1.], [1., 1.]]);
 //!
-//! let out = f.eval()((&w.into_dyn(), &x.into_dyn(), &b.into_dyn()));
+//! let out = f.eval()((&w, &x, &b));
 //! let expected = x.dot(&w) + &b;
 //! assert_eq!(out, expected.into_dyn());
 //! ```
@@ -89,14 +88,14 @@ pub use crate::tracing::{Tensor, TraceSession, Tracer};
 ///
 /// Example:
 /// ```rust,ignore
-/// use chainrule::prelude;
+/// use chainrule::prelude::*;
 ///
 /// #[trace]
 /// fn f(x: Tensor, y: Tensor) -> Tensor {
 ///     x + y
 /// }
 ///
-/// let traced = trace_fn::<f32>(f);
+/// let t_f = trace_fn::<f32>(f);
 /// ```
 pub fn trace_fn<D>(builder: fn(&mut TraceSession<D>) -> (Vec<Id>, Tracer)) -> TraceableFn<D>
 where

@@ -50,7 +50,7 @@ fn main() {
     // 3. Evaluate the function or its gradients.
     let result = f.eval()((&a, &b));
     let df = f.grad()((&a, &b));
-    let ddf = f.grad().grad()((&a, &b));
+    let ddf = f.grad().grad().eval()((&a, &b));
 
 
     println!("result: {:?}", result);
