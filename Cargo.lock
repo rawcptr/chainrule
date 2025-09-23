@@ -19,6 +19,7 @@ name = "chainrule"
 version = "0.1.0"
 dependencies = [
  "chainrule-macros",
+ "itertools",
  "ndarray",
  "ndarray-stats",
  "num-traits",

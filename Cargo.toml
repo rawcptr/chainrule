@@ -17,6 +17,7 @@ ndarray = "0.16.1"
 ndarray-stats = "0.6.0"
 num-traits = "0.2.19"
 chainrule-macros = { path = "chainrule-macros" }
+itertools = "0.13.0"
 
 [workspace]
 members = ["chainrule-macros"]

@@ -1,3 +1,4 @@
+use itertools::Itertools as _;
 use ndarray::Axis;
 
 use crate::{
@@ -122,7 +123,7 @@ impl<D: Floating> Op<D> for ReduceToLike {
     fn eval(&self, ctx: &mut Context<D>) {
         use ndarray::Axis;
 
-        let mut t = ctx.checked_get(&self.inp).clone();
+        let t = ctx.checked_get(&self.inp).clone();
         let like = ctx.checked_get(&self.like);
         let a_shape = t.shape().to_owned();
         let b_shape = like.shape();
@@ -139,39 +140,21 @@ impl<D: Floating> Op<D> for ReduceToLike {
             b_shape
         );
 
-        let rank_diff = a_shape.len() - b_shape.len();
-
-        let mut axes_to_process: Vec<(usize, bool)> = Vec::new();
-
-        for i in 0..rank_diff {
-            axes_to_process.push((i, false));
-        }
-
-        for i in 0..b_shape.len() {
-            let a_idx = i + rank_diff;
-            if a_shape[a_idx] != b_shape[i] {
-                // the only valid mismatch is reducing to a dimension of 1.
-                assert_eq!(
-                    b_shape[i], 1,
-                    "reduce_to_like: incompatible dims, can only reduce to 1. inp: {:?}, like: {:?}",
-                    a_shape, b_shape
-                );
-                axes_to_process.push((a_idx, true));
-            }
-        }
-
-        // Reduce higher axes first to keep indexing valid as dims shrink.
-        axes_to_process.sort_unstable_by_key(|&(axis, _)| std::cmp::Reverse(axis));
-
-        for (ax_idx, keep_dim) in axes_to_process {
-            t = if keep_dim {
-                // Case 1: Keep the dimension for broadcasting.
-                t.sum_axis(Axis(ax_idx)).insert_axis(Axis(ax_idx))
-            } else {
-                // Case 2: Remove the dimension for rank difference.
-                t.sum_axis(Axis(ax_idx))
-            };
-        }
+        use itertools::EitherOrBoth::{Both, Left};
+        let t = a_shape
+            .iter()
+            .enumerate()
+            .zip_longest(b_shape.iter())
+            .rfold(t, |acc, tuple| {
+                match tuple {
+                    Left((axis, _)) => acc.sum_axis(Axis(axis)),
+                    Both((_, &a), &b) if a == b => acc, // same dim, do nothing.
+                    Both((axis, _), &1) => acc.sum_axis(Axis(axis)).insert_axis(Axis(axis)),
+                    _ => panic!(
+                        "reduce_to_like: cannot reduce inp -> like:  inp: {a_shape:?}, like: {b_shape:?}"
+                    ),
+                }
+            });
 
         assert_eq!(
             t.shape(),
