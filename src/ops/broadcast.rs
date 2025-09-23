@@ -91,9 +91,8 @@ impl<D: Floating> Op<D> for BroadcastLike {
     fn eval(&self, ctx: &mut Context<D>) {
         let x = ctx.checked_get(&self.inp);
         let like = ctx.checked_get(&self.like);
-        let shape = like.shape().to_vec();
         let y = x
-            .broadcast(shape)
+            .broadcast(like.shape())
             .expect("broadcast_like: incompatible shapes");
         ctx.insert(self.out, y.to_owned());
     }
