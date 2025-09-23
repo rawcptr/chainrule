@@ -144,10 +144,11 @@ impl<D: Floating> Op<D> for ReduceToLike {
         let t = a_shape
             .iter()
             .enumerate()
-            .zip_longest(b_shape.iter())
-            .rfold(t, |acc, tuple| {
+            .rev()
+            .zip_longest(b_shape.iter().rev())
+            .fold(t, |acc, tuple| {
                 match tuple {
-                    Left((axis, _)) => acc.sum_axis(Axis(axis)),
+                    Left((axis,_)) => acc.sum_axis(Axis(axis)),
                     Both((_, &a), &b) if a == b => acc, // same dim, do nothing.
                     Both((axis, _), &1) => acc.sum_axis(Axis(axis)).insert_axis(Axis(axis)),
                     _ => panic!(
