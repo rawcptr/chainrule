@@ -3,15 +3,11 @@
 
 A minimal automatic differentiation library in Rust, inspired by the functional, composable architecture of JAX.
 
-`chainrule` is an exploration of the core mechanics behind modern automatic differentiation frameworks. It is a project to understand and reconstruct these systems from first principles in a systems language.
+`chainrule` is an exploration of the core mechanics behind modern automatic differentiation frameworks. It is a project to understand and reconstruct these systems from first principles in a systems language. 
 
-## Project Status
+## Showcase
 
-Experimental:
-
-- This project is currently in the design and early implementation phase
-- The README describes the target architecture and the API as envisioned upon completion
-- chainrule is built for learning and demonstration. The API is subject to breaking changes and performance is not a primary design goal.
+A showcase demonstrating the training of a [3 layer MLP on the Fashion MNIST dataset](https://github.com/rawcptr/mnist-showcase)
 
 ## Features
 
@@ -60,6 +56,14 @@ fn main() {
 ```
 
 Note that functions are defined using the symbolic `Tensor` type to enable tracing, but the resulting TraceableFn is executed with concrete `ndarray::Array` types
+
+## Project Status
+
+Experimental:
+
+- This project is currently in the design and early implementation phase, with incomplete documentation.
+- The README describes the target architecture and the API as envisioned upon completion
+- chainrule is built for learning and demonstration. The API is subject to breaking changes and performance is not a primary design goal.
 
 ## Installation
 
